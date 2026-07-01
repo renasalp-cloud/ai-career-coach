@@ -21,7 +21,14 @@ def generate(prompt: str) -> str:
     """
     try:
         client = Client()
-        response = client.generate(model=MODEL_NAME, prompt=prompt)
+        response = client.generate(
+            model=MODEL_NAME,
+            prompt=prompt,
+            options={
+                "temperature": 0.1,
+            },
+        )
+        
         return response.response.strip()
     except Exception as exc:
         raise RuntimeError("Failed to generate text with Ollama.") from exc
