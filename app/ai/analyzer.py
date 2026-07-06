@@ -3,6 +3,7 @@
 import json
 from pathlib import Path
 from app.models import CareerAnalysis
+from app.cv_parser import parse_cv
 
 from app.ai.ollama_provider import generate
 
@@ -27,6 +28,7 @@ def analyze_cv(cv_text: str, target_role: str) -> dict:
     """Analyze a CV for a target role and return structured data."""
 
     prompt_template = PROMPT_PATH.read_text(encoding="utf-8")
+    cv_sections = parse_cv(cv_text)
 
     prompt = f"""
 {prompt_template}
@@ -34,9 +36,9 @@ def analyze_cv(cv_text: str, target_role: str) -> dict:
 Target Role:
 {target_role}
 
-CV:
+ Structured CV Sections:
 <CV>
-{cv_text[:4000]}
+{cv_sections}
 </CV>
 """
 

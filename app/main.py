@@ -1,6 +1,6 @@
 from app.pdf_reader import extract_text
 from app.ai.analyzer import analyze_cv
-
+from app.cv_parser import parse_cv
 
 def _format_value(value) -> str:
     if value is None:
@@ -159,6 +159,15 @@ def main():
 
     try:
         cv_text = extract_text(cv_path)
+        
+        sections = parse_cv(cv_text)
+
+        print("\nDetected CV Sections")
+        print("-" * 27)
+
+        for section, content in sections.items():
+            print(f"\n[{section.upper()}]")
+            print(content[:300])
 
         print("\nAnalyzing CV...\n")
 

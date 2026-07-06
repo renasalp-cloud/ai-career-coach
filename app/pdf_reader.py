@@ -1,14 +1,19 @@
-import re
-
 from pypdf import PdfReader
 
 
 def clean_text(text: str) -> str:
     """
-    Cleans extracted PDF text to make it more readable.
+    Cleans extracted PDF text while preserving line breaks.
     """
-    text = re.sub(r"\s+", " ", text)
-    return text.strip()
+    lines = []
+
+    for line in text.splitlines():
+        cleaned_line = " ".join(line.split())
+
+        if cleaned_line:
+            lines.append(cleaned_line)
+
+    return "\n".join(lines)
 
 
 def extract_text(pdf_path: str) -> str:
