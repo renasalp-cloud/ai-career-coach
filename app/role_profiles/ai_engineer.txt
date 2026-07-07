@@ -1,0 +1,32 @@
+Role: AI Engineer
+
+Critical Skills:
+- Python
+- Machine learning fundamentals
+- Data preprocessing
+- Model training and evaluation
+- Practical AI/ML project experience
+
+Important Skills:
+- Deep learning basics
+- TensorFlow or PyTorch
+- APIs for AI applications
+- Docker
+- Git and GitHub
+- Model deployment basics
+- LLM application development
+
+Optional Skills:
+- NLP
+- Computer vision
+- MLOps
+- Cloud platforms
+- Agentic AI implementation
+- Open source contributions
+- Research experience
+
+Evaluation Notes:
+- Do not mark a skill as missing if it already appears in the CV.
+- If the CV shows basic exposure, only mark the advanced or production-level version as missing.
+- Prioritize practical project experience over certificates.
+- For junior candidates, do not require senior-level leadership experience.

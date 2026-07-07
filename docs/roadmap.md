@@ -1,153 +1,158 @@
-# AI Career Coach - Roadmap
+# AI Career Coach Roadmap
 
-## Phase 1 - Foundation
-
-Goal: Build the first working project structure and command-line prototype.
-
-Tasks:
-- Create project structure
-- Create README
-- Create product vision document
-- Create roadmap document
-- Build basic CLI flow
-- Ask user for CV PDF path
-- Ask user for target career role
-- Show entered information as summary
-
-Status: In progress
+This roadmap describes the long-term evolution of AI Career Coach.
 
 ---
 
-## Phase 2 - CV Processing
+# Milestone 1 — MVP CLI 
 
-Goal: Read and extract text from a PDF CV.
+Status: Completed
 
-Tasks:
-- Add PDF text extraction
-- Validate PDF file path
-- Handle missing or invalid files
-- Clean extracted CV text
-- Show extracted text preview
+## Goal
+
+Build a working command-line application capable of analyzing a CV with a local LLM.
+
+### Completed
+
+- Project architecture
+- Git repository
+- GitHub repository
+- README
+- PDF Reader
+- Text Cleaning
+- CV Parser
+- Structured Prompt
+- Role Profiles (initial)
+- Ollama integration
+- Structured JSON output
+- Pydantic validation
+- CLI presentation
+
+---
+
+# Milestone 2 — Assessment Engine
+
+Status: In Progress
+
+## Goal
+
+Separate business logic from AI reasoning.
+
+### Planned
+
+- Candidate Profile domain model
+- Role Profile loader
+- Assessment Engine
+- Recommendation Engine
+- Learning Roadmap Generator
+- Better prompt orchestration
+- Consistent scoring
+- Evidence-based reasoning
+
+---
+
+# Milestone 3 — Career Intelligence
 
 Status: Planned
 
+## Goal
+
+Improve analysis quality.
+
+### Planned
+
+- Better CV parsing
+- Multiple CV formats
+- Better role understanding
+- Skill normalization
+- Duplicate skill detection
+- Stronger reasoning quality
+- Hallucination reduction
+
 ---
 
-## Phase 3 - AI Analysis Core
-
-Goal: Analyze the CV based on the target role.
-
-Tasks:
-- Create AI analysis prompt
-- Send CV text and target role to AI model
-- Identify strong areas
-- Identify weak or missing areas
-- Generate skill gap analysis
-- Generate improvement suggestions
+# Milestone 4 — Job Matching
 
 Status: Planned
 
+## Goal
+
+Compare candidates against real job descriptions.
+
+### Planned
+
+- Job Description parser
+- CV vs Job comparison
+- Match score
+- Missing requirements
+- ATS compatibility
+- Resume optimization
+
 ---
 
-## Phase 4 - Learning Roadmap
-
-Goal: Give the user a practical development plan.
-
-Tasks:
-- Suggest skills to improve
-- Recommend learning priorities
-- Create short-term learning plan
-- Create project ideas based on missing skills
-- Suggest portfolio improvements
+# Milestone 5 — Report Generation
 
 Status: Planned
 
+## Goal
+
+Generate professional reports.
+
+### Planned
+
+- PDF export
+- HTML export
+- Markdown export
+- Printable reports
+
 ---
 
-## Phase 5 - CV Improvement Suggestions
-
-Goal: Help the user improve their CV content.
-
-Tasks:
-- Suggest better wording for CV sections
-- Recommend missing sections
-- Improve project descriptions
-- Improve skills section
-- Suggest role-specific CV changes
+# Milestone 6 — Web Application
 
 Status: Planned
 
----
+## Goal
 
-## Phase 6 - Report Generation
+Create a modern web interface.
 
-Goal: Generate a clear report for the user.
+### Planned
 
-Tasks:
-- Format AI analysis result
-- Create structured career report
-- Export report as PDF
-- Save generated reports
-
-Status: Planned
-
----
-
-## Phase 7 - Simple Web Interface
-
-Goal: Build a simple user interface.
-
-Tasks:
-- Create basic web page
-- Add CV upload area
-- Add target role input
-- Show analysis results on the page
-- Improve user experience
-
-Status: Planned
+- Authentication
+- Dashboard
+- CV upload
+- Job description upload
+- Interactive report
+- Report history
 
 ---
 
-## Phase 8 - Job Description Matching
-
-Goal: Compare the user's CV with a specific job description.
-
-Tasks:
-- Add optional job description input
-- Compare CV with job description
-- Calculate match percentage
-- Show candidate suitability score
-- Suggest improvements for that specific job
-- Recommend CV changes based on the job description
-
-Status: Optional
-
----
-
-## Phase 9 - User Accounts
-
-Goal: Allow users to save and track their analyses.
-
-Tasks:
-- Create user registration
-- Create login system
-- Save previous CV analyses
-- Track user progress
-- Store generated reports
+# Milestone 7 — Career Platform
 
 Status: Future
 
+## Goal
+
+Transform AI Career Coach into a complete career platform.
+
+### Planned
+
+- Cover Letter Generator
+- Interview Preparation
+- Portfolio Review
+- Career Progress Tracking
+- Learning Dashboard
+- Multiple AI providers
+- API
+- Mobile support
+
 ---
 
-## Version 1.0 Goal
+# Guiding Principle
 
-The first professional version of AI Career Coach should allow a user to:
+Every milestone should improve one of these areas:
 
-1. Upload a PDF CV
-2. Select a target software role
-3. Get AI-based CV analysis
-4. See strengths and weaknesses
-5. Understand missing skills
-6. Receive improvement suggestions
-7. Generate a PDF career report
-8. Use the product through a simple web interface
+- Assessment quality
+- Software architecture
+- User experience
+
+Features should never be added at the expense of code quality or maintainability.

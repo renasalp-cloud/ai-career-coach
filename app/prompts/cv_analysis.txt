@@ -55,6 +55,40 @@ Do not recommend learning skills that are already clearly demonstrated in the CV
 
 Do not classify leadership or project management as Critical unless the target role explicitly requires them.
 
+IMPORTANT CV EVIDENCE RULE
+
+If the CV contains education, work experience, bootcamps, or projects that are directly relevant to the target role, you must mention them in the Professional Summary or Strengths.
+
+Do not ignore relevant experience.
+
+For AI-related roles, AI/ML bootcamps, GenAI exposure, LLM-based applications, model evaluation, and agentic AI concepts must be considered relevant evidence.
+
+SKILL EVIDENCE RULE
+
+Before listing any missing skill, check whether the CV already demonstrates that skill.
+
+If a skill appears in the CV, do NOT list it as missing.
+
+If the CV mentions only basic exposure, you may list the advanced version as missing.
+
+Example:
+- If CV says "Generative AI basics", do not list "Generative AI" as missing.
+- You may list "advanced LLM application development" as missing.
+
+If the CV mentions a skill or concept, you must acknowledge it as present.
+
+Do not write "not mentioned" for any skill, concept, tool, or experience that appears anywhere in the CV.
+
+If the CV mentions a basic or exploratory level, describe it as:
+"basic exposure mentioned in the CV"
+
+Then, if necessary, list only the advanced or production-level version as missing.
+
+Example:
+- CV says: "Explored Agentic AI concepts including autonomous agents and workflow orchestration."
+- Correct missing skill: "production-level agentic AI implementation"
+- Wrong missing skill: "Agentic AI concepts"
+
 
 # ============================================
 # EVALUATION CRITERIA
@@ -201,3 +235,19 @@ Use exactly the following schema.
     }
   ]
 }
+
+
+# ============================================
+# FINAL QUALITY CHECK
+# ============================================
+
+Before returning the JSON, verify internally that:
+
+- professional_summary is never empty.
+- professional_summary must summarize the candidate's actual education, experience, projects, bootcamps, and relevant skills.
+- If relevant AI/ML skills appear in the CV, they must be acknowledged in strengths or professional_summary.
+- Do not write "Not provided" in professional_summary.
+- Do not list a skill as missing if the same skill is clearly present in the CV.
+- If only a basic version is present, mention the advanced version as missing.
+- Every missing skill must be different from the candidate's existing skills.
+- Recommendations must focus on the most important gaps only.
