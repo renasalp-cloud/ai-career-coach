@@ -208,15 +208,167 @@ The parser will continue to evolve as support for more CV formats is added.
 
 ---
 
+# ADR-006 — Generic Candidate Profile Extraction
+
+**Date:** 2026-07-10
+
+**Status:** Accepted
+
+## Context
+
+The first implementation of Candidate Profile Extraction gradually evolved into a CV-specific solution.
+
+The extractor began recognizing particular companies, universities, degree names, and candidate details in order to improve the analysis of a single test CV.
+
+Although this increased the quality of one example, it violated one of the project's main architectural goals: **the system must work for any candidate, not only for the current one.**
+
+## Decision
+
+Candidate Profile Extraction must remain completely generic.
+
+The extraction layer is responsible only for extracting structured information from a parsed CV.
+
+It must never contain knowledge about specific candidates, companies, universities, degrees, or projects.
+
+Semantic normalization is considered a separate responsibility.
+
+The architecture is therefore divided into two independent steps:
+
+```text
+Raw CV Sections
+        │
+        ▼
+Candidate Profile Extractor
+        │
+        ▼
+Candidate Profile Normalizer
+        │
+        ▼
+Verified Candidate Profile
+```
+
+### Candidate Profile Extractor responsibilities
+
+- Parse generic document structure
+- Extract education
+- Extract experience
+- Extract skills
+- Extract languages
+- Extract certifications
+- Extract projects
+- Detect date ranges
+- Preserve factual information only
+
+### Candidate Profile Normalizer responsibilities
+
+- Normalize equivalent skill names
+- Map related technical concepts
+- Remove duplicates
+- Produce a consistent domain model
+- Perform generic semantic enrichment
+
+## The extraction layer MUST NOT
+
+- Check for company names (e.g. Accenture)
+- Check for university names
+- Check for specific degree names
+- Check for candidate names
+- Insert hardcoded dates
+- Contain logic written to make a single CV pass
+
+### Acceptable generic normalization
+
+```python
+if skill == "Image Classification":
+    normalized_skill = "Computer Vision"
+```
+
+### Unacceptable candidate-specific logic
+
+```python
+if "Accenture" in experience_text:
+    add_bootcamp_experience()
+```
+
+## Alternatives Considered
+
+- Keep all extraction logic inside the LLM
+- Continue adding candidate-specific parsing rules
+- Merge extraction and normalization into a single component
+
+## Consequences
+
+### Positive
+
+- Supports different CV formats
+- Generalizes to different candidates
+- Easier unit testing
+- Lower maintenance cost
+- Clear separation of responsibilities
+- Better long-term scalability
+
+### Negative
+
+- Generic parsing is more difficult
+- Additional normalization rules will be required over time
+- More components increase architectural complexity
+
+---
+
 # Future ADRs
 
 Future architectural decisions will also be documented here.
 
-Examples:
+Potential future ADRs include:
 
-- Assessment Engine
-- Candidate Profile domain model
+- Candidate Assessment Engine
 - Job Description Parser
-- ATS Analysis
-- Multi-LLM support
-- Web Architecture 
+- ATS Compatibility Analysis
+- Multi-LLM Support
+- Report Generation Pipeline
+- Web Application Architecture
+- Retrieval-Augmented Generation (RAG)
+
+# ADR-007 — Candidate Profile Pipeline
+
+Date: 2026-07-10
+
+Status:
+Accepted
+
+## Context
+
+Previously the analyzer consumed parsed CV sections directly.
+
+This tightly coupled prompt generation with the CV parser and made semantic normalization difficult.
+
+## Decision
+
+Introduce a Candidate Profile pipeline.
+
+Pipeline:
+
+PDF
+→ Text Cleaner
+→ CV Parser
+→ Candidate Profile Extractor
+→ Candidate Profile Normalizer
+→ Prompt Builder
+→ LLM
+
+The Prompt Builder and Analyzer now consume CandidateProfile instead of raw CV sections.
+
+## Consequences
+
+Advantages
+
+- Better separation of concerns
+- Easier testing
+- Reusable CandidateProfile
+- Better semantic normalization
+- Easier support for multiple CV formats
+
+Trade-offs
+
+- Additional extraction layer
+- Slightly larger pipeline

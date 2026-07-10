@@ -55,6 +55,13 @@ Do not recommend learning skills that are already clearly demonstrated in the CV
 
 Do not classify leadership or project management as Critical unless the target role explicitly requires them.
 
+- Never describe an ongoing degree as completed.
+- Use the candidate profile status field when discussing education.
+- Do not downgrade an explicitly listed skill to "basic exposure" unless the profile evidence supports that wording.
+- Base every strength and missing skill on explicit evidence from the candidate profile.
+- Do not infer that a skill is missing if it appears in the candidate profile.
+- Distinguish between "listed skill", "hands-on experience", and "advanced proficiency".
+
 IMPORTANT CV EVIDENCE RULE
 
 If the CV contains education, work experience, bootcamps, or projects that are directly relevant to the target role, you must mention them in the Professional Summary or Strengths.
@@ -88,6 +95,25 @@ Example:
 - CV says: "Explored Agentic AI concepts including autonomous agents and workflow orchestration."
 - Correct missing skill: "production-level agentic AI implementation"
 - Wrong missing skill: "Agentic AI concepts"
+
+EVIDENCE AND CONSISTENCY RULES
+
+- Absence of evidence is not evidence of absence.
+- If information is not present in the candidate profile, say "not demonstrated in the profile"; never state that the candidate lacks it.
+- Never describe a listed skill as basic, advanced, weak, or strong unless the candidate profile contains evidence supporting that proficiency level.
+- If a skill appears in the skills list or experience highlights, it must not be returned as a missing skill.
+- Consider semantically related evidence before declaring a missing skill.
+  Examples:
+  - Image classification and image preprocessing are evidence of computer vision exposure.
+  - Building and evaluating machine learning models is evidence of hands-on Python and machine learning experience.
+  - Generative AI and LLM applications are evidence of AI application exposure.
+- Distinguish between:
+  1. Skill is present.
+  2. Skill is demonstrated through experience.
+  3. Advanced proficiency is not demonstrated.
+- Do not convert "advanced proficiency is not demonstrated" into "basic exposure".
+- Do not claim that the candidate lacks project experience solely because the projects list is empty.
+- Every missing skill reason must state what evidence was checked and what specific evidence is not demonstrated
 
 
 # ============================================

@@ -2,7 +2,8 @@
 
 import json
 from dataclasses import dataclass
-from typing import Any
+
+from app.candidate_profile.models import CandidateProfile
 
 
 @dataclass(frozen=True)
@@ -12,14 +13,14 @@ class PromptContext:
     prompt_template: str
     target_role: str
     role_profile: str
-    cv_sections: dict[str, Any]
+    candidate_profile: CandidateProfile
 
 
 def build_cv_analysis_prompt(context: PromptContext) -> str:
-    """Build the full CV analysis prompt."""
+    """Build the full candidate analysis prompt."""
 
-    formatted_cv_sections = json.dumps(
-        context.cv_sections,
+    formatted_candidate_profile = json.dumps(
+        context.candidate_profile.model_dump(),
         indent=2,
         ensure_ascii=False,
     )
@@ -33,8 +34,8 @@ Target Role:
 Role Profile:
 {context.role_profile}
 
-Candidate CV Sections:
-<CV>
-{formatted_cv_sections}
-</CV>
+Candidate Profile:
+<CANDIDATE_PROFILE>
+{formatted_candidate_profile}
+</CANDIDATE_PROFILE>
 """
