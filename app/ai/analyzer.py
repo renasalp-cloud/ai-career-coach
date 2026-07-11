@@ -10,6 +10,8 @@ from app.ai.prompt_builder import PromptContext, build_cv_analysis_prompt
 from app.candidate_profile.models import CandidateProfile
 from app.candidate_profile.extractor import extract_candidate_profile
 from app.candidate_profile.normalizer import normalize_candidate_profile
+from app.semantic.matcher import SkillMatcher
+from app.semantic.validator import SkillValidator
 
 from app.ai.ollama_provider import generate
 
@@ -85,11 +87,18 @@ def analyze_cv(cv_text: str, target_role: str) -> dict:
 
     role_profile = load_role_profile(target_role)
 
+# TODO (Sprint 13):
+# Extract required skills from the role profile and pass them to SkillMatcher.
+skill_matches = SkillMatcher().match(candidate_profile, [])
+
+validated_skill_matches = SkillValidator().validate(skill_matches)
+
     prompt_context = PromptContext(
-        prompt_template=prompt_template,
+        template=prompt_template,
         target_role=target_role,
         role_profile=role_profile,
         candidate_profile=candidate_profile,
+        validated_skill_matches=validated_skill_matches,
     )
 
     prompt = build_cv_analysis_prompt(prompt_context)

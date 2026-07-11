@@ -3,17 +3,18 @@
 import json
 from dataclasses import dataclass
 
-from app.candidate_profile.models import CandidateProfile
+from app.models import CandidateProfile, SkillMatch
 
 
 @dataclass(frozen=True)
 class PromptContext:
     """Data required to build a CV analysis prompt."""
 
-    prompt_template: str
+    template: str
     target_role: str
     role_profile: str
     candidate_profile: CandidateProfile
+    validated_skill_matches: list[SkillMatch]
 
 
 def build_cv_analysis_prompt(context: PromptContext) -> str:
@@ -24,9 +25,14 @@ def build_cv_analysis_prompt(context: PromptContext) -> str:
         indent=2,
         ensure_ascii=False,
     )
+    formatted_skill_matches = json.dumps(
+        [match.model_dump() for match in context.validated_skill_matches],
+        indent=2,
+        ensure_ascii=False,
+    )
 
     return f"""
-{context.prompt_template}
+{context.template}
 
 Target Role:
 {context.target_role}
@@ -38,4 +44,9 @@ Candidate Profile:
 <CANDIDATE_PROFILE>
 {formatted_candidate_profile}
 </CANDIDATE_PROFILE>
+
+Validated Skill Matches:
+<VALIDATED_SKILL_MATCHES>
+{formatted_skill_matches}
+</VALIDATED_SKILL_MATCHES>
 """

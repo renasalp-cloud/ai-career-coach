@@ -1,6 +1,10 @@
 """Data models for AI career analysis responses."""
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
+
+from app.candidate_profile.models import CandidateProfile
 
 
 class Strength(BaseModel):
@@ -32,6 +36,19 @@ class LearningWeek(BaseModel):
     topics: list[str] = Field(default_factory=list)
     practical_task: str = ""
     expected_outcome: str = ""
+
+
+class SkillEvidence(BaseModel):
+    source: str
+    text: str
+
+
+class SkillMatch(BaseModel):
+    role_skill: str
+    candidate_skill: str | None = None
+    evidence: list[SkillEvidence] = Field(default_factory=list)
+    status: Literal["demonstrated", "partial", "missing"]
+    confidence: float
 
 
 class CareerAnalysis(BaseModel):
