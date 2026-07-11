@@ -47,8 +47,21 @@ class SkillMatch(BaseModel):
     role_skill: str
     candidate_skill: str | None = None
     evidence: list[SkillEvidence] = Field(default_factory=list)
-    status: Literal["demonstrated", "partial", "missing"]
-    confidence: float
+    status: Literal["demonstrated", "partial", "missing"] | None = None
+    confidence: float | None = None
+
+
+class RequirementSkill(BaseModel):
+    name: str
+    priority: Literal["required", "preferred", "optional"]
+
+
+class RequirementProfile(BaseModel):
+    title: str = ""
+    skills: list[RequirementSkill] = Field(default_factory=list)
+    responsibilities: list[str] = Field(default_factory=list)
+    qualifications: list[str] = Field(default_factory=list)
+    source: str = ""
 
 
 class CareerAnalysis(BaseModel):
