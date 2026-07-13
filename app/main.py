@@ -1,5 +1,6 @@
 from app.pdf_reader import extract_text
 from app.ai.analyzer import analyze_cv
+from app.candidate_profile.models import CandidateProfile
 from app.cv_parser import parse_cv
 
 def _format_value(value) -> str:
@@ -29,6 +30,60 @@ def _format_value(value) -> str:
 def _print_section(title: str, value) -> None:
     print(f"\n{title}:")
     print(_format_value(value))
+
+
+def _print_bullets(items, formatter) -> None:
+    if not items:
+        print("Not provided.")
+        return
+
+    for item in items:
+        print(f"- {formatter(item)}")
+
+
+def print_candidate_profile(candidate_profile: CandidateProfile) -> None:
+    print("=" * 60)
+    print("Candidate Profile")
+
+    _print_section("Summary", candidate_profile.summary)
+
+    print("\nEducation:")
+    _print_bullets(
+        candidate_profile.education,
+        lambda item: " | ".join(
+            part
+            for part in (
+                _format_value(item.degree),
+                _format_value(item.institution),
+                f"{_format_value(item.start_date)} - {_format_value(item.end_date)}",
+                _format_value(item.status),
+            )
+            if part != "Not provided."
+        ) or "Not provided.",
+    )
+
+    print("\nExperience:")
+    _print_bullets(
+        candidate_profile.experience,
+        lambda item: " | ".join(
+            part
+            for part in (
+                _format_value(item.title),
+                _format_value(item.organization),
+                f"{_format_value(item.start_date)} - {_format_value(item.end_date)}",
+                _format_value(item.location),
+                _format_value(item.highlights),
+            )
+            if part != "Not provided."
+        ) or "Not provided.",
+    )
+
+    _print_section("Projects", candidate_profile.projects)
+    _print_section("Skills", [skill.name for skill in candidate_profile.skills])
+    _print_section("Languages", candidate_profile.languages)
+    _print_section("Certifications", candidate_profile.certifications)
+
+    print("=" * 60)
 
 
 def _print_strengths(strengths) -> None:
@@ -171,9 +226,10 @@ def main():
 
         print("\nAnalyzing CV...\n")
 
-        analysis = analyze_cv(cv_text, target_role)
+        analysis_result = analyze_cv(cv_text, target_role, sections)
 
-        print_analysis(analysis)
+        print_candidate_profile(analysis_result.candidate_profile)
+        print_analysis(analysis_result.analysis)
 
     except Exception as e:
         print(f"\nError: {e}")

@@ -34,11 +34,17 @@ def build_cv_analysis_prompt(context: PromptContext) -> str:
     return f"""
 {context.template}
 
+# ============================================
+# ANALYSIS INPUT
+# ============================================
+
 Target Role:
 {context.target_role}
 
 Role Profile:
+<ROLE_PROFILE>
 {context.role_profile}
+</ROLE_PROFILE>
 
 Candidate Profile:
 <CANDIDATE_PROFILE>
@@ -49,4 +55,32 @@ Validated Skill Matches:
 <VALIDATED_SKILL_MATCHES>
 {formatted_skill_matches}
 </VALIDATED_SKILL_MATCHES>
+
+# ============================================
+# FINAL RESPONSE CONTRACT
+# ============================================
+
+The sections above are analysis input only.
+
+Do not return:
+- candidate_profile
+- role_profile
+- validated_skill_matches
+- intermediate pipeline data
+
+Return only one valid CareerAnalysis JSON object.
+
+The top-level keys must be exactly:
+
+- overall_match_score
+- professional_summary
+- strengths
+- missing_skills
+- career_gap_analysis
+- recommendations
+- learning_roadmap
+
+Do not use markdown.
+Do not use code fences.
+Do not add explanations outside the JSON object.
 """

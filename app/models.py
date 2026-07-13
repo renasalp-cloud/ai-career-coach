@@ -2,7 +2,7 @@
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from app.candidate_profile.models import CandidateProfile
 
@@ -65,10 +65,20 @@ class RequirementProfile(BaseModel):
 
 
 class CareerAnalysis(BaseModel):
-    overall_match_score: int = 0
-    professional_summary: str = ""
-    strengths: list[Strength] = Field(default_factory=list)
-    missing_skills: MissingSkills = Field(default_factory=MissingSkills)
-    career_gap_analysis: str = ""
-    recommendations: list[Recommendation] = Field(default_factory=list)
-    learning_roadmap: list[LearningWeek] = Field(default_factory=list)
+    overall_match_score: int
+    professional_summary: str
+    strengths: list[Strength]
+    missing_skills: MissingSkills
+    career_gap_analysis: str
+    recommendations: list[Recommendation]
+    learning_roadmap: list[LearningWeek]
+
+    @model_validator(mode="after")
+    def enforce_learning_roadmap_length(self):
+        if len(self.learning_roadmap) < 4:
+            raise ValueError("learning_roadmap must contain at least 4 entries.")
+
+        if len(self.learning_roadmap) > 4:
+            self.learning_roadmap = self.learning_roadmap[:4]
+
+        return self

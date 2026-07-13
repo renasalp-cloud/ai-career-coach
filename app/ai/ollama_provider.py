@@ -24,6 +24,7 @@ def generate(prompt: str) -> str:
         response = client.generate(
             model=MODEL_NAME,
             prompt=prompt,
+            format="json",
             options={
                 "temperature": 0.1,
             },

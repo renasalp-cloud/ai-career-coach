@@ -372,3 +372,153 @@ Trade-offs
 
 - Additional extraction layer
 - Slightly larger pipeline
+
+# ADR-008 — Requirement-Based Semantic Matching
+
+**Date:** 2026-07-13
+
+**Status:** Accepted
+
+## Context
+
+Earlier versions relied primarily on AI reasoning to determine whether a candidate satisfied role requirements.
+
+This made matching inconsistent and difficult to verify.
+
+## Decision
+
+Introduce a deterministic semantic matching pipeline before AI analysis.
+
+Pipeline:
+
+Requirement Profile
+↓
+
+Evidence Collector
+↓
+
+Skill Matcher
+↓
+
+Skill Validator
+↓
+
+Validated Skill Matches
+
+The LLM receives validated skill matches instead of deciding skill presence itself.
+
+## Alternatives Considered
+
+- Let the LLM determine all matching
+- Keyword-only matching
+
+## Consequences
+
+### Positive
+
+- Deterministic skill validation
+- Better explainability
+- Reduced hallucinations
+- Easier testing
+- Better provider independence
+
+### Negative
+
+- Additional preprocessing layer
+- Alias maintenance over time
+
+# ADR-009 — Output Normalization Before Validation
+
+**Date:** 2026-07-13
+
+**Status:** Accepted
+
+## Context
+
+Small language models occasionally returned valid analysis with incorrect field names or slightly different structures.
+
+Although the content was correct, schema validation failed.
+
+## Decision
+
+Introduce an Output Normalizer between JSON extraction and Pydantic validation.
+
+Pipeline:
+
+LLM
+↓
+
+JSON Extraction
+↓
+
+Output Normalizer
+↓
+
+Pydantic Validation
+
+The normalizer repairs structural inconsistencies only.
+
+It must never modify analytical conclusions.
+
+## Alternatives Considered
+
+- Larger prompts
+- Multiple repair prompts
+- Relaxing the schema
+
+## Consequences
+
+### Positive
+
+- Higher validation success
+- Better provider compatibility
+- More robust pipeline
+
+### Negative
+
+- Additional maintenance
+
+# ADR-010 — Deterministic Post-Processing
+
+**Date:** 2026-07-13
+
+**Status:** Accepted
+
+## Context
+
+Even after schema validation, LLM responses could contradict validated candidate facts.
+
+Examples included reporting demonstrated skills as missing or generating inconsistent recommendations.
+
+## Decision
+
+Introduce deterministic post-processing after validation.
+
+Responsibilities include:
+
+- Remove demonstrated skills from missing skills
+- Validate strengths
+- Group missing skills
+- Align recommendations
+- Align learning roadmap
+- Correct unsupported summaries
+
+The post-processing layer improves consistency without regenerating the analysis.
+
+## Alternatives Considered
+
+- Move all logic into prompts
+- Trust raw LLM output
+
+## Consequences
+
+### Positive
+
+- Consistent results
+- Lower hallucination rate
+- Better separation of responsibilities
+- Less prompt complexity
+
+### Negative
+
+- Additional processing layer
