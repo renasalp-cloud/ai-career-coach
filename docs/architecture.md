@@ -2,11 +2,11 @@
 
 ## Vision
 
-AI Career Coach is an intelligent career assessment platform that evaluates how well a candidate matches a target role.
+AI Career Coach is a profession-agnostic career assessment platform.
 
-The system is not designed to be a simple LLM wrapper.
+The system evaluates how well a candidate matches a target role using deterministic processing before AI reasoning.
 
-Instead, the LLM is one component inside a larger decision-making pipeline that combines structured data, predefined role requirements, and AI reasoning.
+The LLM is a presentation and explanation component—not the decision maker.
 
 ---
 
@@ -16,16 +16,16 @@ Given:
 
 - A candidate CV
 - A target role
-- (Optional) A job description
+- A requirement source (job description or requirement document)
 
-The system should produce:
+The system produces:
 
 - Overall match score
 - Professional summary
 - Strengths
 - Missing skills
 - Career gap analysis
-- Personalized recommendations
+- Recommendations
 - Learning roadmap
 
 ---
@@ -33,174 +33,170 @@ The system should produce:
 # High-Level Architecture
 
 ```text
-                   Candidate CV (PDF)
-                           │
-                           ▼
-                     PDF Reader
-                           │
-                           ▼
-                     Text Cleaner
-                           │
-                           ▼
-                      CV Parser
-                           │
-                           ▼
-                  Candidate Profile
-                           │
-            ┌──────────────┴──────────────┐
-            │                             │
-            ▼                             ▼
-      Role Profile                 Job Description
-            │                             │
-            └──────────────┬──────────────┘
-                           ▼
-                  Assessment Engine
-                           │
-                           ▼
-                     AI Reasoning
-                           │
-                           ▼
-                 Structured JSON Report
-                           │
-                           ▼
-              CLI / Web / PDF Presentation
+                 Candidate CV                     Requirement Source
+                      │                                   │
+                      ▼                                   ▼
+                 PDF Reader                    Requirement Source
+                      │                                   │
+                      ▼                                   ▼
+                Text Cleaner                  Requirement Loader
+                      │                                   │
+                      ▼                                   ▼
+                  CV Parser               Requirement Extractor
+                      │                                   │
+                      ▼                                   ▼
+        Candidate Profile Extractor     Requirement Normalizer
+                      │                                   │
+                      ▼                                   ▼
+     Candidate Profile Normalizer    Requirement Validator
+                      │                                   │
+                      └──────────────┬────────────────────┘
+                                     ▼
+                           Evidence Collector
+                                     │
+                                     ▼
+                              Skill Matcher
+                                     │
+                                     ▼
+                              Skill Validator
+                                     │
+                                     ▼
+                    Requirement Assessment Engine
+                                     │
+                                     ▼
+                              Prompt Builder
+                                     │
+                                     ▼
+                                   LLM
+                                     │
+                                     ▼
+                          Output Normalizer
+                                     │
+                                     ▼
+                          Pydantic Validation
+                                     │
+                                     ▼
+                  Deterministic Consistency Processor
+                                     │
+                                     ▼
+                              CLI / Web / API
 ```
 
 ---
 
 # Core Components
 
-## 1. PDF Reader
+## Candidate Pipeline
 
-Responsible for:
+Responsible for converting an unstructured CV into a normalized CandidateProfile.
 
-- Reading PDF files
-- Extracting raw text
-- Returning plain text
+Components:
 
-Input:
-
-- PDF file
-
-Output:
-
-- Raw text
-
----
-
-## 2. Text Cleaner
-
-Responsible for:
-
-- Removing unnecessary whitespace
-- Preserving useful formatting
-- Preparing text for parsing
-
-Input:
-
-- Raw text
+- PDF Reader
+- Text Cleaner
+- CV Parser
+- Candidate Profile Extractor
+- Candidate Profile Normalizer
 
 Output:
 
-- Clean text
+CandidateProfile
 
 ---
 
-## 3. CV Parser
+## Requirement Pipeline
 
-Responsible for extracting structured information.
+Responsible for converting requirement text into a validated RequirementProfile.
 
-Example:
+Components:
 
-- Education
-- Experience
-- Projects
-- Skills
-- Languages
-- Certifications
-
-Input:
-
-- Clean text
+- Requirement Source
+- Requirement Loader
+- Requirement Extractor
+- Requirement Normalizer
+- Requirement Validator
 
 Output:
 
-- Candidate Profile
+RequirementProfile
+
+The pipeline is source-agnostic.
+
+Requirement sources may include:
+
+- pasted job descriptions
+- text files
+- future external integrations
 
 ---
 
-## 4. Candidate Profile
+## Evidence Collector
 
-Represents the candidate as structured data.
+Collects supporting evidence for candidate skills from the CandidateProfile.
 
-Future example:
-
-```python
-CandidateProfile(
-    education=[],
-    experience=[],
-    projects=[],
-    skills=[],
-    certifications=[],
-    languages=[]
-)
-```
-
-The assessment engine should work with structured data rather than raw text whenever possible.
+Evidence is later used during semantic matching and explanation generation.
 
 ---
 
-## 5. Role Profile
+## Skill Matcher
 
-Defines what a specific career role expects.
-
-Examples:
-
-- AI Engineer
-- Data Scientist
-- Backend Developer
-- Frontend Developer
-- Marketing Specialist
-
-Each profile defines:
-
-- Critical skills
-- Important skills
-- Optional skills
-
-Role profiles help reduce hallucinations and improve consistency.
-
----
-
-## 6. Assessment Engine
-
-The heart of the application.
+Matches candidate skills against requirement skills.
 
 Responsibilities:
 
-- Compare candidate profile with target role
-- Detect strengths
-- Detect missing skills
-- Calculate match score
-- Generate recommendations
-- Build learning roadmap
+- exact matching
+- alias matching
+- deterministic matching
 
-Important:
-
-Business logic belongs here.
-
-The Assessment Engine should remain independent of the AI provider.
+Business rules remain deterministic.
 
 ---
 
-## 7. AI Provider
+## Skill Validator
 
-Responsible only for reasoning.
+Validates every match.
 
-Current implementation:
+Produces deterministic demonstrated/missing status.
 
-- Ollama
-- Qwen 2.5
+---
+
+## Requirement Assessment Engine
+
+Produces deterministic assessment results.
+
+Responsibilities include:
+
+- requirement coverage
+- required coverage
+- preferred coverage
+- optional coverage
+- demonstrated skills
+- missing requirement groups
+
+No coverage calculations are performed by the LLM.
+
+---
+
+## Prompt Builder
+
+Formats structured deterministic context for the language model.
+
+Responsibilities:
+
+- serialize structured objects
+- assemble prompt context
+
+It does not perform business logic.
+
+---
+
+## AI Provider
+
+Responsible only for explanation and presentation.
+
+Current provider:
+
+- Ollama (Qwen2.5)
 
 Future providers:
 
@@ -209,117 +205,113 @@ Future providers:
 - Gemini
 - Local models
 
-The AI provider should never contain business logic.
+Changing providers must not affect business logic.
 
 ---
 
-## 8. Validation Layer
+## Output Pipeline
 
-Every AI response must be validated.
+Responsible for validating AI output before presentation.
 
-Responsibilities:
+Components:
 
-- JSON validation
-- Schema validation
-- Type checking
+- Output Normalizer
+- Pydantic Validation
+- Validation Repair
+- Deterministic Consistency Processor
 
-Invalid AI responses should never reach the user.
-
----
-
-## 9. Presentation Layer
-
-Responsible for presenting the validated report.
-
-Possible outputs:
-
-- CLI
-- Web UI
-- PDF Report
-- REST API
-
-Presentation should never contain business logic.
+Invalid AI output must never reach the user.
 
 ---
 
 # Design Principles
 
+## Deterministic Before AI
+
+Business logic executes before AI reasoning.
+
+The LLM explains deterministic conclusions.
+
+---
+
 ## Single Responsibility
 
-Each module should have one responsibility.
+Each component owns exactly one responsibility.
 
 ---
 
 ## Structured Data First
 
-Prefer structured objects over raw text whenever possible.
+Structured objects are preferred over raw text.
 
 ---
 
-## AI as a Component
+## Profession Agnostic
 
-The AI model is a tool.
+No profession-specific rules exist in deterministic components.
 
-It is not the application.
+---
 
-Business logic should remain independent from the LLM.
+## Provider Agnostic
+
+Changing LLM providers must not require business logic changes.
+
+---
+
+## Explainable Decisions
+
+Every conclusion should be traceable to candidate evidence and requirement data.
 
 ---
 
 ## Validation First
 
-Never trust AI output without validation.
+Every AI response is normalized and validated before presentation.
 
 ---
 
-## Extensibility
+# Current Implementation
 
-Adding a new role should require only:
+Implemented:
 
-- a new Role Profile
-
-Adding a new AI model should require only:
-
-- a new AI Provider
-
----
-
-## Current MVP
-
-The current implementation includes:
-
-- PDF extraction
-- Text cleaning
-- CV parsing
-- Structured prompts
-- Local LLM (Ollama)
-- Structured JSON output
-- Pydantic validation
-- CLI interface
+- Candidate Pipeline
+- Requirement Pipeline
+- Evidence Collection
+- Deterministic Skill Matching
+- Skill Validation
+- Requirement Assessment Engine
+- Prompt Builder
+- Output Normalization
+- Pydantic Validation
+- Validation Repair
+- Deterministic Consistency Processing
+- CLI Interface
+- 135 Automated Tests
 
 ---
 
 # Future Architecture
 
-The long-term architecture will introduce:
+Planned improvements:
 
-- Job Description Parser
-- ATS Analysis
+- Requirement Decomposition Engine
+- Evidence Intelligence Pipeline
+- Evidence Quality Scoring
+- Experience Weighting
+- Hallucination Guard
+- ATS Optimization
 - Resume Optimization
-- Cover Letter Generator
+- Cover Letter Generation
 - Interview Preparation
-- Career Dashboard
+- REST API
 - Web Application
 - User Accounts
 - Report History
-- Multi-LLM Support
 
 ---
 
 # Guiding Principle
 
-Every new feature must answer the following question:
+Every architectural change must reduce LLM responsibility and increase deterministic reasoning.
 
-> Does this improve the quality of the career assessment?
-
-If the answer is no, the feature should not be implemented.
+The LLM should explain decisions—not make them.

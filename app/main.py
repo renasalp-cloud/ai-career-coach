@@ -2,6 +2,47 @@ from app.pdf_reader import extract_text
 from app.ai.analyzer import analyze_cv
 from app.candidate_profile.models import CandidateProfile
 from app.cv_parser import parse_cv
+from app.requirements.pipeline import RequirementPipeline
+from app.requirements.source import RequirementSource, RequirementSourceType
+
+
+def _read_pasted_requirement_text(input_func=input) -> str:
+    """Read job-description lines until a line containing only END."""
+    print("Paste the job description. Enter END on its own line when finished:")
+    lines = []
+    while True:
+        line = input_func()
+        if line.strip() == "END":
+            return "\n".join(lines)
+        lines.append(line)
+
+
+def collect_requirement_source(target_role: str, input_func=input) -> RequirementSource:
+    """Collect a supported requirement source from interactive CLI input."""
+    print("\nRequirement source:")
+    print("1. Paste job description")
+    print("2. Job-description TXT file")
+    selection = input_func("Select requirement source (1 or 2): ").strip()
+
+    if selection == "1":
+        content = _read_pasted_requirement_text(input_func)
+        return RequirementSource(
+            source_type=RequirementSourceType.PASTED_TEXT,
+            content=content,
+            name="Pasted job description",
+            target_role=target_role,
+        )
+
+    if selection == "2":
+        path = input_func("Job-description TXT file path: ").strip()
+        return RequirementSource(
+            source_type=RequirementSourceType.TEXT_FILE,
+            content=path,
+            name=path,
+            target_role=target_role,
+        )
+
+    raise ValueError("Invalid requirement source selection. Enter 1 or 2.")
 
 def _format_value(value) -> str:
     if value is None:
@@ -213,6 +254,18 @@ def main():
     target_role = input("Target role: ")
 
     try:
+        requirement_source = collect_requirement_source(target_role, input)
+    except Exception as error:
+        print(f"\nRequirement source error: {error}")
+        return
+
+    try:
+        requirement_profile = RequirementPipeline().build(requirement_source)
+    except Exception as error:
+        print(f"\nRequirement extraction error: {error}")
+        return
+
+    try:
         cv_text = extract_text(cv_path)
         
         sections = parse_cv(cv_text)
@@ -226,13 +279,13 @@ def main():
 
         print("\nAnalyzing CV...\n")
 
-        analysis_result = analyze_cv(cv_text, target_role, sections)
+        analysis_result = analyze_cv(cv_text, requirement_profile, sections)
 
         print_candidate_profile(analysis_result.candidate_profile)
         print_analysis(analysis_result.analysis)
 
-    except Exception as e:
-        print(f"\nError: {e}")
+    except Exception as error:
+        print(f"\nAnalyzer error: {error}")
 
 
 if __name__ == "__main__":

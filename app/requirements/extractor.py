@@ -4,19 +4,57 @@ from app.models import RequirementProfile, RequirementSkill
 
 
 SECTION_PRIORITIES = {
-    "Critical Skills:": "required",
-    "Important Skills:": "preferred",
-    "Optional Skills:": "optional",
+    "critical skills": "required",
+    "important skills": "preferred",
+    "optional skills": "optional",
+    "requirements": "required",
+    "required qualifications": "required",
+    "must have": "required",
+    "must-have": "required",
+    "minimum qualifications": "required",
+    "essential skills": "required",
+    "required skills": "required",
+    "key skills": "required",
+    "skills": "required",
+    "core skills": "required",
+    "technical skills": "required",
+    "qualifications": "required",
+    "preferred qualifications": "preferred",
+    "nice to have": "preferred",
+    "nice-to-have": "preferred",
+    "preferred skills": "preferred",
+    "desired skills": "preferred",
+    "additional qualifications": "preferred",
+    "bonus skills": "optional",
+    "advantageous skills": "optional",
 }
+
+RESPONSIBILITY_SECTIONS = {
+    "responsibilities",
+    "key responsibilities",
+    "what you will do",
+    "what you'll do",
+    "your role",
+}
+
+INTRODUCTORY_SECTIONS = {
+    "about the job",
+    "location",
+    "salary",
+    "company description",
+}
+
+BULLET_MARKERS = {"-", "*", "•"}
 
 
 def extract_requirement_profile(
     target_role: str,
     role_profile_text: str,
 ) -> RequirementProfile:
-    """Extract a source-agnostic requirement profile from local role profile text."""
+    """Extract a source-agnostic requirement profile from requirement text."""
 
     skills: list[RequirementSkill] = []
+    seen_requirements: set[str] = set()
     current_priority: str | None = None
 
     for line in role_profile_text.splitlines():
@@ -25,20 +63,37 @@ def extract_requirement_profile(
         if not stripped_line:
             continue
 
-        if stripped_line.endswith(":"):
-            current_priority = SECTION_PRIORITIES.get(stripped_line)
+        heading = stripped_line.removesuffix(":").strip().casefold()
+        if heading in SECTION_PRIORITIES:
+            current_priority = SECTION_PRIORITIES[heading]
             continue
 
-        if current_priority is not None and stripped_line.startswith("- "):
+        if (
+            heading in RESPONSIBILITY_SECTIONS
+            or heading in INTRODUCTORY_SECTIONS
+            or stripped_line.endswith(":")
+        ):
+            current_priority = None
+            continue
+
+        if current_priority is not None:
+            requirement_name = stripped_line
+            if requirement_name[:1] in BULLET_MARKERS:
+                requirement_name = requirement_name[1:].strip()
+            requirement_key = requirement_name.casefold()
+            if not requirement_name or requirement_key in seen_requirements:
+                continue
+
             skills.append(
                 RequirementSkill(
-                    name=stripped_line[2:].strip(),
+                    name=requirement_name,
                     priority=current_priority,
                 )
             )
+            seen_requirements.add(requirement_key)
 
     return RequirementProfile(
         title=target_role,
         skills=skills,
-        source="local_role_profile",
+        source="extracted_requirement_text",
     )

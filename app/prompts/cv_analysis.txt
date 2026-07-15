@@ -38,19 +38,23 @@ Be objective and consistent.
 
 Prefer demonstrated evidence over candidate claims.
 
-Use validated skill matches as the authority for skill status.
+Use the requirement assessment as the authority for coverage and missing requirement groups.
+
+Use validated skill matches as the authority for supporting skill evidence.
 
 Use the candidate profile as the authority for candidate history.
 
-Use the role profile as the authority for role expectations.
+Use the requirement profile as the authority for role expectations.
 
 When sources conflict, apply this priority:
 
-1. Validated Skill Matches
+1. Requirement Assessment
 
-2. Candidate Profile
+2. Validated Skill Matches
 
-3. Role Profile
+3. Candidate Profile
+
+4. Requirement Profile
 
 A demonstrated skill must not appear in missing_skills.
 
@@ -70,13 +74,9 @@ Evaluate only alignment with the target role.
 
 The overall_match_score must be an integer from 0 to 100.
 
-Base the score on demonstrated alignment and identified gaps.
+Set the score to requirement_assessment.overall_coverage_percentage.
 
-Use lower scores when critical requirements are largely missing.
-
-Use higher scores when critical requirements are largely demonstrated.
-
-Avoid extreme scores unless strongly supported.
+Do not calculate or adjust the score.
 
 The professional_summary must be one concise paragraph.
 
@@ -118,19 +118,16 @@ Each missing skill item must contain exactly:
 
 "reason": string
 
-Map required role skills to critical.
+Use critical_missing_skills, preferred_missing_skills, and optional_missing_skills
+from the requirement assessment for the critical, important, and optional arrays.
 
-Map preferred role skills to important.
+Do not calculate or reclassify missing requirement groups.
 
-Map optional role skills to optional.
-
-Include only skills marked missing in validated skill matches.
-
-Do not classify demonstrated or partial skills as missing.
+Do not classify demonstrated skills as missing.
 
 Do not duplicate missing skills across categories.
 
-Use the role skill name without replacing it with another term.
+Use the requirement skill name without replacing it with another term.
 
 Reasons must explain the evidence gap concisely.
 
@@ -194,7 +191,7 @@ Base roadmap content on identified gaps and recommendations.
 
 Do not include unrelated topics.
 
-Do not require a specific technology unless it appears in the role input.
+Do not require a specific technology unless it appears in the requirement profile.
 
 Each practical_task must be achievable within one week.
 
@@ -259,7 +256,7 @@ Replace placeholder values with the analysis result.
 
 Preserve every required field.
 
-The learning_roadmap must still contain four complete objects.
+The learning_roadmap must contain four complete objects.
 
 Do not copy empty example items when no item is supported.
 
@@ -269,9 +266,9 @@ Use empty arrays for strengths, recommendations, or missing-skill categories whe
 {target_role}
 </TARGET_ROLE>
 
-<ROLE_PROFILE>
-{role_profile}
-</ROLE_PROFILE>
+<REQUIREMENT_PROFILE>
+{requirement_profile}
+</REQUIREMENT_PROFILE>
 
 <CANDIDATE_PROFILE>
 {candidate_profile}
@@ -280,5 +277,9 @@ Use empty arrays for strengths, recommendations, or missing-skill categories whe
 <VALIDATED_SKILL_MATCHES>
 {validated_skill_matches}
 </VALIDATED_SKILL_MATCHES>
+
+<REQUIREMENT_ASSESSMENT>
+{requirement_assessment}
+</REQUIREMENT_ASSESSMENT>
 
 Return only the valid JSON object.

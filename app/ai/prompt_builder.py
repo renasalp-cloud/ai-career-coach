@@ -3,7 +3,8 @@
 import json
 from dataclasses import dataclass
 
-from app.models import CandidateProfile, SkillMatch
+from app.assessment.requirement_assessment import RequirementAssessment
+from app.models import CandidateProfile, RequirementProfile, SkillMatch
 
 
 @dataclass(frozen=True)
@@ -11,10 +12,10 @@ class PromptContext:
     """Data required to build a CV analysis prompt."""
 
     template: str
-    target_role: str
-    role_profile: str
+    requirement_profile: RequirementProfile
     candidate_profile: CandidateProfile
     validated_skill_matches: list[SkillMatch]
+    requirement_assessment: RequirementAssessment
 
 
 def build_cv_analysis_prompt(context: PromptContext) -> str:
@@ -25,8 +26,21 @@ def build_cv_analysis_prompt(context: PromptContext) -> str:
         indent=2,
         ensure_ascii=False,
     )
+
     formatted_skill_matches = json.dumps(
         [match.model_dump() for match in context.validated_skill_matches],
+        indent=2,
+        ensure_ascii=False,
+    )
+
+    formatted_requirement_profile = json.dumps(
+        context.requirement_profile.model_dump(),
+        indent=2,
+        ensure_ascii=False,
+    )
+
+    formatted_requirement_assessment = json.dumps(
+        context.requirement_assessment.model_dump(),
         indent=2,
         ensure_ascii=False,
     )
@@ -39,12 +53,12 @@ def build_cv_analysis_prompt(context: PromptContext) -> str:
 # ============================================
 
 Target Role:
-{context.target_role}
+{context.requirement_profile.title}
 
-Role Profile:
-<ROLE_PROFILE>
-{context.role_profile}
-</ROLE_PROFILE>
+Requirement Profile:
+<REQUIREMENT_PROFILE>
+{formatted_requirement_profile}
+</REQUIREMENT_PROFILE>
 
 Candidate Profile:
 <CANDIDATE_PROFILE>
@@ -56,6 +70,11 @@ Validated Skill Matches:
 {formatted_skill_matches}
 </VALIDATED_SKILL_MATCHES>
 
+Requirement Assessment:
+<REQUIREMENT_ASSESSMENT>
+{formatted_requirement_assessment}
+</REQUIREMENT_ASSESSMENT>
+
 # ============================================
 # FINAL RESPONSE CONTRACT
 # ============================================
@@ -63,9 +82,11 @@ Validated Skill Matches:
 The sections above are analysis input only.
 
 Do not return:
+
 - candidate_profile
-- role_profile
+- requirement_profile
 - validated_skill_matches
+- requirement_assessment
 - intermediate pipeline data
 
 Return only one valid CareerAnalysis JSON object.

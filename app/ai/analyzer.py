@@ -6,14 +6,14 @@ from pathlib import Path
 from pydantic import ValidationError
 
 from app.analysis.output_normalizer import normalize_career_analysis_output
-from app.models import CareerAnalysis
+from app.assessment.requirement_assessment import RequirementAssessmentEngine
+from app.models import CareerAnalysis, RequirementProfile
 from app.analysis.consistency_processor import AnalysisConsistencyProcessor
 from app.cv_parser import parse_cv
 from app.ai.prompt_builder import PromptContext, build_cv_analysis_prompt
 from app.candidate_profile.models import CandidateProfile
 from app.candidate_profile.extractor import extract_candidate_profile
 from app.candidate_profile.normalizer import normalize_candidate_profile
-from app.requirements.extractor import extract_requirement_profile
 from app.semantic.default_aliases import build_default_skill_alias_registry
 from app.semantic.matcher import SkillMatcher
 from app.semantic.validator import SkillValidator
@@ -22,8 +22,6 @@ from app.ai.ollama_provider import generate
 
 
 PROMPT_PATH = Path("app/prompts/cv_analysis.txt")
-
-ROLE_PROFILE_DIR = Path("app/role_profiles")
 
 DEBUG_ARTIFACT_PATH = Path("debug/last_failed_analysis.json")
 
@@ -83,16 +81,6 @@ class AnalysisResult:
     candidate_profile: CandidateProfile
     analysis: dict
 
-
-def load_role_profile(target_role: str) -> str:
-    """Load a role profile if one exists for the target role."""
-    normalized_role = target_role.lower().strip().replace(" ", "_")
-    profile_path = ROLE_PROFILE_DIR / f"{normalized_role}.txt"
-
-    if profile_path.exists():
-        return profile_path.read_text(encoding="utf-8")
-
-    return "No predefined role profile available."
 
 def extract_json(text: str) -> str:
     """Extract JSON from an AI response."""
@@ -161,6 +149,7 @@ Do not return input structures such as:
 - candidate_profile
 - role_profile
 - validated_skill_matches
+- requirement_assessment
 
 Do not use markdown.
 Do not use code fences.
@@ -271,10 +260,10 @@ def _validate_analysis_response(
 
 def analyze_cv(
     cv_text: str,
-    target_role: str,
+    requirement_profile: RequirementProfile,
     cv_sections: dict[str, str] | None = None,
 ) -> AnalysisResult:
-    """Analyze a CV for a target role and return structured data."""
+    """Analyze a CV against an already-built requirement profile."""
 
     prompt_template = PROMPT_PATH.read_text(encoding="utf-8")
 
@@ -284,19 +273,21 @@ def analyze_cv(
     candidate_profile = extract_candidate_profile(cv_sections)
     candidate_profile = normalize_candidate_profile(candidate_profile)
 
-    role_profile = load_role_profile(target_role)
-    requirements = extract_requirement_profile(target_role, role_profile)
     skill_matcher = SkillMatcher(
         alias_registry=build_default_skill_alias_registry(),
     )
-    skill_matches = skill_matcher.match(candidate_profile, requirements)
+    skill_matches = skill_matcher.match(candidate_profile, requirement_profile)
     validated_skill_matches = SkillValidator().validate(skill_matches)
+    requirement_assessment = RequirementAssessmentEngine().assess(
+        requirement_profile,
+        validated_skill_matches,
+    )
     prompt_context = PromptContext(
         template=prompt_template,
-        target_role=target_role,
-        role_profile=role_profile,
+        requirement_profile=requirement_profile,
         candidate_profile=candidate_profile,
         validated_skill_matches=validated_skill_matches,
+        requirement_assessment=requirement_assessment,
     )
 
     prompt = build_cv_analysis_prompt(prompt_context)
@@ -311,7 +302,7 @@ def analyze_cv(
     analysis = AnalysisConsistencyProcessor().process(
         analysis,
         candidate_profile,
-        requirements,
+        requirement_profile,
         validated_skill_matches,
     )
 

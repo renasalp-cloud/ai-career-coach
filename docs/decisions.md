@@ -128,7 +128,11 @@ The AI provider is responsible only for reasoning.
 
 **Date:** 2026-07-06
 
-**Status:** Accepted
+> Superseded in Sprint 14 by the Generic Requirement Pipeline.
+> Static role profiles are no longer the primary requirement source.
+
+Status:
+Superseded by ADR-011
 
 ## Context
 
@@ -522,3 +526,178 @@ The post-processing layer improves consistency without regenerating the analysis
 ### Negative
 
 - Additional processing layer
+
+# ADR-011 — Generic Requirement Pipeline
+
+**Date:** 2026-07-15
+
+**Status:** Accepted
+
+## Context
+
+Earlier versions relied on static role profile files to define role expectations.
+
+This approach required maintaining one role profile for every supported profession and did not scale to real-world job descriptions.
+
+The project goal is to remain profession-agnostic and support arbitrary requirement sources.
+
+## Decision
+
+Introduce a generic Requirement Pipeline.
+
+Pipeline:
+
+Requirement Source
+↓
+
+Requirement Loader
+↓
+
+Requirement Extractor
+↓
+
+Requirement Normalizer
+↓
+
+Requirement Validator
+↓
+
+Requirement Profile
+
+Requirement sources are independent from the analyzer and may include:
+
+- pasted job descriptions
+- text files
+- future external integrations
+
+The analyzer consumes only a validated RequirementProfile.
+
+It has no knowledge of how the requirements were obtained.
+
+## Alternatives Considered
+
+- Continue using static role profile files
+- Let the LLM infer role requirements
+- Load role definitions inside the analyzer
+
+## Consequences
+
+### Positive
+
+- Profession-agnostic architecture
+- Scalable to arbitrary job descriptions
+- Cleaner analyzer responsibilities
+- Easier testing
+- Better separation of concerns
+
+### Negative
+
+- Requirement extraction becomes a dedicated subsystem
+- Additional validation and normalization layers are required
+
+# ADR-012 — Requirement Validation Pipeline
+
+**Date:** 2026-07-15
+
+**Status:** Accepted
+
+## Context
+
+Requirement extraction may produce incomplete or inconsistent RequirementProfile objects.
+
+Allowing invalid requirement data to enter semantic matching would reduce reliability and complicate downstream processing.
+
+## Decision
+
+Introduce a deterministic Requirement Validator.
+
+Responsibilities include:
+
+- validate profile structure
+- reject empty requirement sets
+- reject duplicate requirements
+- reject unsupported priorities
+- reject invalid requirement names
+
+The validator performs validation only.
+
+It never repairs or modifies extracted data.
+
+Normalization and validation remain separate responsibilities.
+
+## Alternatives Considered
+
+- Validate inside the analyzer
+- Let semantic matching handle invalid profiles
+- Automatically repair invalid requirements
+
+## Consequences
+
+### Positive
+
+- Stronger data integrity
+- Clear separation of responsibilities
+- Easier unit testing
+- Earlier failure detection
+
+### Negative
+
+- Additional validation component
+
+# ADR-013 — Deterministic Requirement Assessment
+
+**Date:** 2026-07-15
+
+**Status:** Accepted
+
+## Context
+
+Coverage calculations, missing-skill grouping, and requirement statistics were previously left to the language model.
+
+This reduced consistency and made results provider-dependent.
+
+## Decision
+
+Introduce a deterministic Requirement Assessment Engine.
+
+Pipeline:
+
+Validated Skill Matches
+↓
+
+Requirement Assessment
+
+The assessment engine is responsible for:
+
+- overall coverage
+- required coverage
+- preferred coverage
+- optional coverage
+- demonstrated skills
+- critical missing skills
+- preferred missing skills
+- optional missing skills
+
+The Prompt Builder receives a RequirementAssessment instead of requiring the LLM to calculate these values.
+
+The LLM explains deterministic assessment results rather than producing them.
+
+## Alternatives Considered
+
+- Let the LLM calculate coverage
+- Calculate coverage inside prompts
+- Combine assessment with semantic matching
+
+## Consequences
+
+### Positive
+
+- Deterministic coverage calculations
+- Reduced hallucinations
+- Simpler prompts
+- Better explainability
+- Greater provider independence
+
+### Negative
+
+- Additional assessment layer
