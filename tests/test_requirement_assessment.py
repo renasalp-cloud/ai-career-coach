@@ -1,10 +1,12 @@
 import unittest
 
+from app.ai.prompt_builder import PromptContext, build_cv_analysis_prompt
 from app.assessment.requirement_assessment import (
+    EvidenceStrength,
     RequirementAssessmentEngine,
     RequirementAssessmentError,
 )
-from app.models import RequirementProfile, RequirementSkill, SkillMatch
+from app.models import CandidateProfile, RequirementProfile, RequirementSkill, SkillEvidence, SkillMatch
 
 
 def _profile(*skills: tuple[str, str]) -> RequirementProfile:
@@ -13,8 +15,15 @@ def _profile(*skills: tuple[str, str]) -> RequirementProfile:
     )
 
 
-def _match(name: str, status: str) -> SkillMatch:
-    return SkillMatch.model_construct(role_skill=name, status=status)
+def _match(name: str, status: str, *scores: int) -> SkillMatch:
+    return SkillMatch.model_construct(
+        role_skill=name,
+        status=status,
+        evidence=[
+            SkillEvidence(source="experience", text=f"Evidence {index}", quality_score=score)
+            for index, score in enumerate(scores)
+        ],
+    )
 
 
 class RequirementAssessmentEngineTest(unittest.TestCase):
@@ -120,6 +129,115 @@ class RequirementAssessmentEngineTest(unittest.TestCase):
     def test_unsupported_match_status_is_rejected(self) -> None:
         with self.assertRaisesRegex(RequirementAssessmentError, "Unsupported.*status"):
             self.engine.assess(_profile(("A", "required")), [_match("A", "partial")])
+
+    def test_maps_selected_evidence_scores_to_strength_categories(self) -> None:
+        profile = _profile(
+            ("Strong", "required"),
+            ("Moderate", "preferred"),
+            ("Weak", "optional"),
+            ("Missing", "required"),
+        )
+
+        assessment = self.engine.assess(
+            profile,
+            [
+                _match("Strong", "demonstrated", 75),
+                _match("Moderate", "demonstrated", 74),
+                _match("Weak", "demonstrated", 1),
+                _match("Missing", "missing", 100),
+            ],
+        )
+
+        self.assertEqual(
+            [item.evidence_strength for item in assessment.assessed_requirements],
+            [
+                EvidenceStrength.STRONG,
+                EvidenceStrength.MODERATE,
+                EvidenceStrength.WEAK,
+                EvidenceStrength.NONE,
+            ],
+        )
+        self.assertEqual(
+            [item.status for item in assessment.assessed_requirements],
+            ["demonstrated", "demonstrated", "demonstrated", "missing"],
+        )
+
+    def test_strongest_selected_evidence_determines_strength_without_averaging(self) -> None:
+        assessment = self.engine.assess(
+            _profile(("A", "required"), ("B", "preferred")),
+            [
+                _match("A", "demonstrated", 10, 80, 10),
+                _match("B", "demonstrated", 75, 75),
+            ],
+        )
+
+        self.assertEqual(
+            [item.evidence_strength for item in assessment.assessed_requirements],
+            [EvidenceStrength.STRONG, EvidenceStrength.STRONG],
+        )
+
+    def test_weak_evidence_does_not_change_coverage_or_grouping(self) -> None:
+        profile = _profile(
+            ("Required demonstrated", "required"),
+            ("Required missing", "required"),
+            ("Preferred demonstrated", "preferred"),
+            ("Optional missing", "optional"),
+        )
+        assessment = self.engine.assess(
+            profile,
+            [
+                _match("Optional missing", "missing"),
+                _match("Preferred demonstrated", "demonstrated", 10),
+                _match("Required missing", "missing"),
+                _match("Required demonstrated", "demonstrated", 10),
+            ],
+        )
+
+        self.assertEqual(assessment.overall_coverage_percentage, 50)
+        self.assertEqual(assessment.required_coverage_percentage, 50)
+        self.assertEqual(assessment.preferred_coverage_percentage, 100)
+        self.assertEqual(assessment.optional_coverage_percentage, 0)
+        self.assertEqual(assessment.critical_missing_skills, ["Required missing"])
+        self.assertEqual(assessment.preferred_missing_skills, [])
+        self.assertEqual(assessment.optional_missing_skills, ["Optional missing"])
+
+    def test_assessment_preserves_order_inputs_and_is_deterministic(self) -> None:
+        profile = _profile(("First", "required"), ("Second", "preferred"))
+        matches = [
+            _match("Second", "missing"),
+            _match("First", "demonstrated", 50, 80),
+        ]
+        original_profile = profile.model_dump()
+        original_matches = [match.model_dump() for match in matches]
+
+        first = self.engine.assess(profile, matches)
+        second = self.engine.assess(profile, matches)
+
+        self.assertEqual(
+            [item.name for item in first.assessed_requirements],
+            ["First", "Second"],
+        )
+        self.assertEqual(first, second)
+        self.assertEqual(profile.model_dump(), original_profile)
+        self.assertEqual([match.model_dump() for match in matches], original_matches)
+
+    def test_prompt_builder_serializes_evidence_aware_assessment(self) -> None:
+        profile = _profile(("A", "required"))
+        matches = [_match("A", "demonstrated", 80)]
+        assessment = self.engine.assess(profile, matches)
+
+        prompt = build_cv_analysis_prompt(
+            PromptContext(
+                template="Template",
+                requirement_profile=profile,
+                candidate_profile=CandidateProfile(),
+                validated_skill_matches=matches,
+                requirement_assessment=assessment,
+            )
+        )
+
+        self.assertIn('"assessed_requirements"', prompt)
+        self.assertIn('"evidence_strength": "strong"', prompt)
 
 
 if __name__ == "__main__":

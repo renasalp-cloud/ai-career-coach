@@ -1,7 +1,11 @@
+import copy
 import unittest
 
 from app.candidate_profile.models import ExperienceEntry, SkillEntry
-from app.models import CandidateProfile, RequirementProfile, RequirementSkill, SkillEvidence
+from app.evidence.models import CandidateEvidence, ScoredCandidateEvidence
+from app.evidence.ranker import EvidenceRanker
+from app.evidence.scorer import EvidenceQualityScorer
+from app.models import CandidateProfile, RequirementProfile, RequirementSkill
 from app.semantic.alias_registry import SkillAliasRegistry
 from app.semantic.matcher import SkillMatcher
 
@@ -10,25 +14,154 @@ class FakeEvidenceCollector:
     def __init__(self) -> None:
         self.call_count = 0
 
-    def collect(self, candidate: CandidateProfile) -> list[SkillEvidence]:
+    def collect(self, candidate: CandidateProfile) -> list[CandidateEvidence]:
         self.call_count += 1
         return [
-            SkillEvidence(
-                source="skills",
-                text="Python",
-            ),
-            SkillEvidence(
-                source="experience",
-                text="Used Python for data preprocessing",
-            ),
-            SkillEvidence(
-                source="experience",
-                text="Built Docker containers",
-            ),
+            CandidateEvidence(skill="Python", source_type="skills_section", source_text="Python", source_label="Skills section"),
+            CandidateEvidence(skill="Used Python", source_type="work_experience", source_text="Used Python for data preprocessing", source_label="Engineer"),
+            CandidateEvidence(skill="Built Docker", source_type="work_experience", source_text="Built Docker containers", source_label="Engineer"),
         ]
 
 
+class StaticEvidenceCollector:
+    def __init__(self, evidence: list[CandidateEvidence]) -> None:
+        self.evidence = evidence
+
+    def collect(self, candidate: CandidateProfile) -> list[CandidateEvidence]:
+        return self.evidence
+
+
+class TrackingScorer(EvidenceQualityScorer):
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def score_all(
+        self, evidence: list[CandidateEvidence]
+    ) -> list[ScoredCandidateEvidence]:
+        self.calls += 1
+        return super().score_all(evidence)
+
+
+class TrackingRanker(EvidenceRanker):
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def select_top(
+        self, evidence: list[ScoredCandidateEvidence], limit: int
+    ) -> list[ScoredCandidateEvidence]:
+        self.calls += 1
+        return super().select_top(evidence, limit)
+
+
 class SkillMatcherTest(unittest.TestCase):
+    def test_problem_solving_matches_requirement_with_generic_skills_suffix(self) -> None:
+        candidate = CandidateProfile(skills=[SkillEntry(name="Problem solving")])
+        requirements = RequirementProfile(
+            skills=[
+                RequirementSkill(
+                    name="Problem-solving skills",
+                    priority="required",
+                )
+            ]
+        )
+
+        match = SkillMatcher().match(candidate, requirements)[0]
+
+        self.assertEqual(match.candidate_skill, "Problem solving")
+        self.assertEqual(match.evidence[0].text, "Problem solving")
+
+    def test_scores_ranks_and_limits_only_relevant_structured_evidence(self) -> None:
+        evidence = [
+            CandidateEvidence(
+                skill="Python", source_type="skills_section",
+                source_text="Python", source_label="Skills",
+            ),
+            CandidateEvidence(
+                skill="Python", source_type="project",
+                source_text="Built Python project", source_label="Project",
+            ),
+            CandidateEvidence(
+                skill="Docker", source_type="work_experience",
+                source_text="Implemented Docker deployment", source_label="Engineer",
+            ),
+            CandidateEvidence(
+                skill="Python", source_type="work_experience",
+                source_text="Implemented Python service", source_label="Engineer",
+            ),
+        ]
+        scorer = TrackingScorer()
+        ranker = TrackingRanker()
+        matcher = SkillMatcher(
+            evidence_collector=StaticEvidenceCollector(evidence),
+            evidence_scorer=scorer,
+            evidence_ranker=ranker,
+            evidence_limit=2,
+        )
+
+        match = matcher.match(
+            CandidateProfile(skills=[SkillEntry(name="Python")]),
+            RequirementProfile(
+                skills=[RequirementSkill(name="Python", priority="required")]
+            ),
+        )[0]
+
+        self.assertEqual(scorer.calls, 1)
+        self.assertEqual(ranker.calls, 1)
+        self.assertEqual(
+            [item.text for item in match.evidence],
+            ["Implemented Python service", "Built Python project"],
+        )
+
+    def test_equal_score_evidence_preserves_collection_order_and_large_limit(self) -> None:
+        evidence = [
+            CandidateEvidence(
+                skill="Python", source_type="project",
+                source_text="Python first", source_label="Project",
+            ),
+            CandidateEvidence(
+                skill="Python", source_type="project",
+                source_text="Python second", source_label="Project",
+            ),
+        ]
+        matcher = SkillMatcher(
+            evidence_collector=StaticEvidenceCollector(evidence), evidence_limit=5
+        )
+
+        match = matcher.match(
+            CandidateProfile(),
+            RequirementProfile(
+                skills=[RequirementSkill(name="Python", priority="required")]
+            ),
+        )[0]
+
+        self.assertEqual(
+            [item.text for item in match.evidence], ["Python first", "Python second"]
+        )
+
+    def test_matching_does_not_mutate_inputs_or_structured_evidence(self) -> None:
+        candidate = CandidateProfile(skills=[SkillEntry(name="Python")])
+        requirements = RequirementProfile(
+            skills=[RequirementSkill(name="Python", priority="required")]
+        )
+        evidence = [
+            CandidateEvidence(
+                skill="Python", source_type="skills_section",
+                source_text="Python", source_label="Skills",
+            )
+        ]
+        originals = copy.deepcopy((candidate, requirements, evidence))
+        matcher = SkillMatcher(evidence_collector=StaticEvidenceCollector(evidence))
+
+        first = matcher.match(candidate, requirements)
+        second = matcher.match(candidate, requirements)
+
+        self.assertEqual(first, second)
+        self.assertEqual((candidate, requirements, evidence), originals)
+
+    def test_rejects_non_positive_evidence_limit(self) -> None:
+        with self.assertRaisesRegex(ValueError, "evidence_limit must be positive"):
+            SkillMatcher(evidence_limit=0)
+
     def test_machine_learning_fundamentals_matches_machine_learning(self) -> None:
         candidate = CandidateProfile(skills=[SkillEntry(name="Machine learning")])
         requirements = RequirementProfile(skills=[
@@ -100,7 +233,7 @@ class SkillMatcherTest(unittest.TestCase):
         match = SkillMatcher().match(candidate, requirements)[0]
 
         self.assertEqual(match.candidate_skill, "data analysis")
-        self.assertEqual(match.evidence[0].source, "training")
+        self.assertEqual(match.evidence[0].source, "certification")
 
     def test_llm_application_development_matches_hands_on_evidence(self) -> None:
         candidate = CandidateProfile(
@@ -200,7 +333,7 @@ class SkillMatcherTest(unittest.TestCase):
         matches = SkillMatcher().match(candidate, requirements)
 
         self.assertEqual(matches[0].candidate_skill, " Python ")
-        self.assertEqual(matches[0].evidence[0].text, " Python ")
+        self.assertEqual(matches[0].evidence[0].text, "Python")
 
     def test_unmatched_requirement_returns_empty_candidate_and_evidence(self) -> None:
         candidate = CandidateProfile(
@@ -288,15 +421,23 @@ class SkillMatcherTest(unittest.TestCase):
         self.assertEqual(
             [item.model_dump() for item in matches[0].evidence],
             [
-                {"source": "skills", "text": "Python"},
-                {"source": "experience", "text": "Used Python for data preprocessing"},
+                {
+                    "source": "experience",
+                    "text": "Used Python for data preprocessing",
+                    "quality_score": 55,
+                },
+                {"source": "skills", "text": "Python", "quality_score": 15},
             ],
         )
         self.assertEqual(matches[1].candidate_skill, "Docker")
         self.assertEqual(
             [item.model_dump() for item in matches[1].evidence],
             [
-                {"source": "experience", "text": "Built Docker containers"},
+                {
+                    "source": "experience",
+                    "text": "Built Docker containers",
+                    "quality_score": 75,
+                },
             ],
         )
 

@@ -44,6 +44,23 @@ class AnalysisConsistencyProcessorTest(unittest.TestCase):
         )
         self.assertEqual(result.missing_skills.critical, [])
 
+    def test_clean_requirement_name_flows_to_recommendations_and_roadmap(self) -> None:
+        requirement_name = "Excellent written and verbal communication"
+        requirements = RequirementProfile(
+            skills=[RequirementSkill(name=requirement_name, priority="required")]
+        )
+
+        result = self.processor.process(
+            _analysis(),
+            CandidateProfile(),
+            requirements,
+            [SkillMatch(role_skill=requirement_name, status="missing")],
+        )
+
+        self.assertEqual(result.recommendations[0].title, f"Develop {requirement_name}")
+        self.assertTrue(all(week.topics == [requirement_name] for week in result.learning_roadmap))
+        self.assertNotEqual(result.recommendations[0].title, "Develop Excellent written")
+
     def test_demonstrated_candidate_alias_is_removed_from_missing_skills(self) -> None:
         analysis = _analysis()
         self.processor._remove_demonstrated_skills(

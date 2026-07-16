@@ -165,6 +165,21 @@ Your Role
             ],
         )
 
+    def test_bulleted_section_headings_never_become_requirements(self) -> None:
+        role_profile = """
+Requirements:
+- Calendar management
+- Responsibilities
+- Requirements
+- Preferred
+- Preferred Qualifications
+- Nice to have
+"""
+
+        profile = extract_requirement_profile("Office Administrator", role_profile)
+
+        self.assertEqual([skill.name for skill in profile.skills], ["Calendar management"])
+
     def test_maps_job_description_skill_headings_to_required(self) -> None:
         role_profile = """
 Key Skills

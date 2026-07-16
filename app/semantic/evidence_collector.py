@@ -1,50 +1,54 @@
-"""Collect deterministic evidence text from candidate profiles."""
+"""Collect deterministic structured evidence from candidate profiles."""
 
-from app.models import CandidateProfile, SkillEvidence
+from app.evidence.models import CandidateEvidence, EvidenceSourceType
+from app.models import CandidateProfile
 
 
 class CandidateEvidenceCollector:
-    def collect(self, candidate: CandidateProfile) -> list[SkillEvidence]:
-        evidence: list[SkillEvidence] = []
+    def collect(self, candidate: CandidateProfile) -> list[CandidateEvidence]:
+        evidence: list[CandidateEvidence] = []
+
+        def add(
+            skill: str,
+            source_type: EvidenceSourceType,
+            source_text: str,
+            source_label: str,
+        ) -> None:
+            if not skill.strip() or not source_text.strip():
+                return
+            item = CandidateEvidence(
+                skill=skill,
+                source_type=source_type,
+                source_text=source_text,
+                source_label=source_label,
+            )
+            identity = (
+                item.skill,
+                item.source_type,
+                item.source_text,
+                item.source_label,
+            )
+            if identity not in seen:
+                seen.add(identity)
+                evidence.append(item)
+
+        seen: set[tuple[str, EvidenceSourceType, str, str]] = set()
 
         for skill in candidate.skills:
-            text = skill.name.strip()
-
-            if text:
-                evidence.append(
-                    SkillEvidence(
-                        source=skill.source or "skills",
-                        text=skill.name,
-                    )
-                )
+            add(skill.name, EvidenceSourceType.SKILLS_SECTION, skill.name, "Skills section")
 
         for experience in candidate.experience:
+            label = " - ".join(
+                part.strip() for part in (experience.title, experience.organization) if part.strip()
+            ) or "Work experience"
             for highlight in experience.highlights:
-                if highlight.strip():
-                    evidence.append(
-                        SkillEvidence(
-                            source="experience",
-                            text=highlight,
-                        )
-                    )
+                add(highlight, EvidenceSourceType.WORK_EXPERIENCE, highlight, label)
 
         for project in candidate.projects:
-            if project.strip():
-                evidence.append(
-                    SkillEvidence(
-                        source="projects",
-                        text=project,
-                    )
-                )
+            add(project, EvidenceSourceType.PROJECT, project, "Project")
 
         for certification in candidate.certifications:
-            if certification.strip():
-                evidence.append(
-                    SkillEvidence(
-                        source="training",
-                        text=certification,
-                    )
-                )
+            add(certification, EvidenceSourceType.CERTIFICATION, certification, "Certification")
 
         for education in candidate.education:
             education_parts = [
@@ -55,13 +59,14 @@ class CandidateEvidenceCollector:
                 education.status,
             ]
             text = " | ".join(part for part in education_parts if part.strip())
+            label = " - ".join(
+                part.strip() for part in (education.degree, education.institution) if part.strip()
+            ) or "Education"
+            add(text, EvidenceSourceType.EDUCATION, text, label)
 
-            if text:
-                evidence.append(
-                    SkillEvidence(
-                        source="education",
-                        text=text,
-                    )
-                )
+        add(candidate.summary, EvidenceSourceType.SUMMARY, candidate.summary, "Candidate summary")
+
+        for language in candidate.languages:
+            add(language, EvidenceSourceType.OTHER, language, "Languages section")
 
         return evidence

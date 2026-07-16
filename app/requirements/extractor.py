@@ -20,6 +20,7 @@ SECTION_PRIORITIES = {
     "technical skills": "required",
     "qualifications": "required",
     "preferred qualifications": "preferred",
+    "preferred": "preferred",
     "nice to have": "preferred",
     "nice-to-have": "preferred",
     "preferred skills": "preferred",
@@ -63,7 +64,11 @@ def extract_requirement_profile(
         if not stripped_line:
             continue
 
-        heading = stripped_line.removesuffix(":").strip().casefold()
+        content_line = stripped_line
+        if content_line[:1] in BULLET_MARKERS:
+            content_line = content_line[1:].strip()
+
+        heading = content_line.removesuffix(":").strip().casefold()
         if heading in SECTION_PRIORITIES:
             current_priority = SECTION_PRIORITIES[heading]
             continue
@@ -77,9 +82,7 @@ def extract_requirement_profile(
             continue
 
         if current_priority is not None:
-            requirement_name = stripped_line
-            if requirement_name[:1] in BULLET_MARKERS:
-                requirement_name = requirement_name[1:].strip()
+            requirement_name = content_line
             requirement_key = requirement_name.casefold()
             if not requirement_name or requirement_key in seen_requirements:
                 continue

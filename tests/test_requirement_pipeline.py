@@ -25,6 +25,12 @@ class RequirementPipelineTest(unittest.TestCase):
         self.loader = Mock()
         self.loader.load.return_value = self.loaded_text
         self.extractor = Mock(return_value=self.extracted_profile)
+        self.decomposer = Mock()
+        self.decomposed_profile = RequirementProfile(
+            title="Target role",
+            skills=[RequirementSkill(name=" Skill ", priority="required")],
+        )
+        self.decomposer.decompose.return_value = self.decomposed_profile
         self.normalizer = Mock()
         self.normalizer.normalize.return_value = self.normalized_profile
         self.validated_profile = RequirementProfile(
@@ -36,6 +42,7 @@ class RequirementPipelineTest(unittest.TestCase):
         self.pipeline = RequirementPipeline(
             loader=self.loader,
             extractor=self.extractor,
+            decomposer=self.decomposer,
             normalizer=self.normalizer,
             validator=self.validator,
         )
@@ -50,10 +57,15 @@ class RequirementPipelineTest(unittest.TestCase):
 
         self.extractor.assert_called_once_with("Target role", self.loaded_text)
 
-    def test_passes_extracted_profile_to_normalizer(self) -> None:
+    def test_passes_extracted_profile_to_decomposer(self) -> None:
         self.pipeline.build(self.source)
 
-        self.normalizer.normalize.assert_called_once_with(self.extracted_profile)
+        self.decomposer.decompose.assert_called_once_with(self.extracted_profile)
+
+    def test_passes_decomposed_profile_to_normalizer(self) -> None:
+        self.pipeline.build(self.source)
+
+        self.normalizer.normalize.assert_called_once_with(self.decomposed_profile)
 
     def test_passes_normalized_profile_to_validator(self) -> None:
         self.pipeline.build(self.source)
@@ -71,6 +83,9 @@ class RequirementPipelineTest(unittest.TestCase):
         self.extractor.side_effect = (
             lambda target_role, text: calls.append("extractor") or self.extracted_profile
         )
+        self.decomposer.decompose.side_effect = (
+            lambda profile: calls.append("decomposer") or self.decomposed_profile
+        )
         self.normalizer.normalize.side_effect = (
             lambda profile: calls.append("normalizer") or self.normalized_profile
         )
@@ -80,7 +95,7 @@ class RequirementPipelineTest(unittest.TestCase):
 
         self.pipeline.build(self.source)
 
-        self.assertEqual(calls, ["loader", "extractor", "normalizer", "validator"])
+        self.assertEqual(calls, ["loader", "extractor", "decomposer", "normalizer", "validator"])
 
     def test_loader_error_propagates_unchanged(self) -> None:
         error = RuntimeError("loader failed")
@@ -91,6 +106,7 @@ class RequirementPipelineTest(unittest.TestCase):
 
         self.assertIs(context.exception, error)
         self.extractor.assert_not_called()
+        self.decomposer.decompose.assert_not_called()
         self.normalizer.normalize.assert_not_called()
         self.validator.validate.assert_not_called()
 
@@ -114,6 +130,17 @@ class RequirementPipelineTest(unittest.TestCase):
         self.normalizer.normalize.assert_not_called()
         self.validator.validate.assert_not_called()
 
+    def test_decomposer_error_propagates_unchanged(self) -> None:
+        error = RuntimeError("decomposer failed")
+        self.decomposer.decompose.side_effect = error
+
+        with self.assertRaises(RuntimeError) as context:
+            self.pipeline.build(self.source)
+
+        self.assertIs(context.exception, error)
+        self.normalizer.normalize.assert_not_called()
+        self.validator.validate.assert_not_called()
+
     def test_normalizer_error_propagates_unchanged(self) -> None:
         error = RuntimeError("normalizer failed")
         self.normalizer.normalize.side_effect = error
@@ -123,6 +150,37 @@ class RequirementPipelineTest(unittest.TestCase):
 
         self.assertIs(context.exception, error)
         self.validator.validate.assert_not_called()
+
+    def test_office_administrator_text_produces_clean_requirements(self) -> None:
+        pipeline = RequirementPipeline()
+        source = RequirementSource(
+            source_type=RequirementSourceType.PASTED_TEXT,
+            target_role="Office Administrator",
+            content="""
+Responsibilities
+- Coordinate meetings and office supplies
+Requirements
+- Calendar management
+- Excellent written and verbal communication
+- Problem-solving skills
+- Requirements
+Preferred
+- Document management
+""",
+        )
+
+        profile = pipeline.build(source)
+
+        self.assertEqual(
+            [(skill.name, skill.priority) for skill in profile.skills],
+            [
+                ("Calendar management", "required"),
+                ("Excellent written and verbal communication", "required"),
+                ("Problem-solving skills", "required"),
+                ("Document management", "preferred"),
+            ],
+        )
+        self.assertNotIn("Excellent written", [skill.name for skill in profile.skills])
 
 if __name__ == "__main__":
     unittest.main()

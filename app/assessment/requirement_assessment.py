@@ -1,5 +1,8 @@
 """Summarize validated requirement matches deterministically."""
 
+from enum import Enum
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 from app.models import RequirementProfile, SkillMatch
@@ -7,6 +10,26 @@ from app.models import RequirementProfile, SkillMatch
 
 class RequirementAssessmentError(ValueError):
     """Raised when requirements and validated matches are inconsistent."""
+
+
+class EvidenceStrength(str, Enum):
+    STRONG = "strong"
+    MODERATE = "moderate"
+    WEAK = "weak"
+    NONE = "none"
+
+
+EVIDENCE_STRENGTH_THRESHOLDS = (
+    (75, EvidenceStrength.STRONG),
+    (50, EvidenceStrength.MODERATE),
+    (1, EvidenceStrength.WEAK),
+)
+
+
+class AssessedRequirement(BaseModel):
+    name: str
+    status: Literal["demonstrated", "missing"]
+    evidence_strength: EvidenceStrength
 
 
 class RequirementAssessment(BaseModel):
@@ -25,6 +48,7 @@ class RequirementAssessment(BaseModel):
     optional_total: int
     optional_demonstrated: int
     optional_coverage_percentage: int
+    assessed_requirements: list[AssessedRequirement] = Field(default_factory=list)
     demonstrated_skills: list[str] = Field(default_factory=list)
     critical_missing_skills: list[str] = Field(default_factory=list)
     preferred_missing_skills: list[str] = Field(default_factory=list)
@@ -44,6 +68,25 @@ class RequirementAssessmentEngine:
     def _append_unique(values: list[str], value: str) -> None:
         if value not in values:
             values.append(value)
+
+    @staticmethod
+    def _evidence_strength(match: SkillMatch) -> EvidenceStrength:
+        if match.status == "missing":
+            return EvidenceStrength.NONE
+
+        scores = [
+            evidence.quality_score
+            for evidence in match.evidence
+            if evidence.quality_score is not None
+        ]
+        if not scores:
+            return EvidenceStrength.NONE
+
+        strongest_score = max(scores)
+        for minimum_score, strength in EVIDENCE_STRENGTH_THRESHOLDS:
+            if strongest_score >= minimum_score:
+                return strength
+        return EvidenceStrength.NONE
 
     def assess(
         self,
@@ -81,10 +124,18 @@ class RequirementAssessmentEngine:
         demonstrated = {"required": 0, "preferred": 0, "optional": 0}
         demonstrated_skills: list[str] = []
         missing = {"required": [], "preferred": [], "optional": []}
+        assessed_requirements: list[AssessedRequirement] = []
 
         for requirement in requirement_profile.skills:
             totals[requirement.priority] += 1
             match = matches_by_name[requirement.name]
+            assessed_requirements.append(
+                AssessedRequirement(
+                    name=requirement.name,
+                    status=match.status,
+                    evidence_strength=self._evidence_strength(match),
+                )
+            )
             if match.status == "demonstrated":
                 demonstrated[requirement.priority] += 1
                 self._append_unique(demonstrated_skills, requirement.name)
@@ -115,6 +166,7 @@ class RequirementAssessmentEngine:
             optional_coverage_percentage=self._percentage(
                 demonstrated["optional"], totals["optional"]
             ),
+            assessed_requirements=assessed_requirements,
             demonstrated_skills=demonstrated_skills,
             critical_missing_skills=missing["required"],
             preferred_missing_skills=missing["preferred"],

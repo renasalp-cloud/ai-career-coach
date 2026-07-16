@@ -1,6 +1,9 @@
 # Python
 __pycache__/
-*.pyc
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
 
 # Virtual Environment
 venv/
@@ -21,3 +24,6 @@ data/*.pdf
 
 # Temporary Files
 diff.txt
+
+# Debug
+debug/

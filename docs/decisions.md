@@ -701,3 +701,256 @@ The LLM explains deterministic assessment results rather than producing them.
 ### Negative
 
 - Additional assessment layer
+
+# ADR-014 — Atomic Requirement Decomposition
+
+**Date:** 2026-07-16
+
+**Status:** Accepted
+
+## Context
+
+Requirement extraction originally preserved complete requirement sentences.
+
+Many real-world job descriptions contain compound requirements such as:
+
+* Python, Docker, and cloud deployment
+* Planning and stakeholder communication
+
+Treating these as single requirements reduced semantic matching quality and produced inconsistent missing-skill reporting.
+
+## Decision
+
+Introduce a deterministic Requirement Decomposer between extraction and normalization.
+
+Pipeline:
+
+Requirement Extractor
+
+↓
+
+Requirement Decomposer
+
+↓
+
+Requirement Normalizer
+
+The decomposer is responsible for safely converting compound requirements into atomic concepts while preserving semantic meaning.
+
+Protected phrases and ambiguous verb structures remain intact.
+
+## Alternatives Considered
+
+* Leave decomposition to the LLM
+* Split every conjunction blindly
+* Perform decomposition during semantic matching
+
+## Consequences
+
+### Positive
+
+* Better requirement granularity
+* Improved semantic matching
+* Cleaner missing-skill reporting
+* Reduced prompt complexity
+* Deterministic behavior
+
+### Negative
+
+* Additional preprocessing component
+* Continuous refinement of decomposition heuristics
+
+---
+
+# ADR-015 — Structured Candidate Evidence
+
+**Date:** 2026-07-16
+
+**Status:** Accepted
+
+## Context
+
+Earlier versions represented candidate evidence as lightweight text snippets attached directly to skill matches.
+
+This lost information about evidence origin and prevented later deterministic reasoning.
+
+## Decision
+
+Introduce a structured Candidate Evidence model.
+
+Evidence is collected before semantic matching and preserves:
+
+* source type
+* originating section
+* supporting text
+* related skill
+
+The evidence pipeline is independent of matching and assessment.
+
+## Alternatives Considered
+
+* Continue using simple text evidence
+* Collect evidence inside the matcher
+* Let the LLM infer supporting evidence
+
+## Consequences
+
+### Positive
+
+* Better explainability
+* Stronger separation of responsibilities
+* Reusable evidence model
+* Easier testing
+* Foundation for evidence scoring
+
+### Negative
+
+* Additional domain model
+* More preprocessing stages
+
+---
+
+# ADR-016 — Deterministic Evidence Quality Scoring
+
+**Date:** 2026-07-16
+
+**Status:** Accepted
+
+## Context
+
+Not every piece of candidate evidence provides the same level of confidence.
+
+Work experience generally provides stronger evidence than a simple skills declaration.
+
+## Decision
+
+Introduce a deterministic Evidence Quality Scorer.
+
+The scorer assigns quality scores using generic, provider-independent rules.
+
+Scoring occurs before semantic matching.
+
+The scorer evaluates evidence quality only.
+
+It never determines whether a requirement is demonstrated.
+
+## Alternatives Considered
+
+* Let the LLM judge evidence quality
+* Treat every evidence source equally
+
+## Consequences
+
+### Positive
+
+* Explainable evidence quality
+* Deterministic scoring
+* Better downstream evidence selection
+* Reduced prompt responsibility
+
+### Negative
+
+* Generic weighting rules require future calibration
+
+---
+
+# ADR-017 — Deterministic Evidence Ranking
+
+**Date:** 2026-07-16
+
+**Status:** Accepted
+
+## Context
+
+Semantic matching may collect multiple relevant evidence entries for the same requirement.
+
+Their presentation order should not depend on collection order alone.
+
+## Decision
+
+Introduce an Evidence Ranker after quality scoring.
+
+Evidence is ranked by deterministic quality score while preserving stable ordering for equal scores.
+
+Only the strongest relevant evidence is attached to validated matches.
+
+## Alternatives Considered
+
+* Preserve collection order
+* Allow the LLM to choose evidence
+* Attach every collected evidence item
+
+## Consequences
+
+### Positive
+
+* Better explainability
+* Stronger deterministic behavior
+* Cleaner prompts
+* Reduced LLM responsibility
+
+### Negative
+
+* Additional processing layer
+
+---
+
+# ADR-018 — Evidence-Aware Requirement Assessment
+
+**Date:** 2026-07-16
+
+**Status:** Accepted
+
+## Context
+
+Requirement Assessment previously distinguished only demonstrated and missing requirements.
+
+It did not indicate how strongly a demonstrated requirement was supported.
+
+## Decision
+
+Extend Requirement Assessment with deterministic evidence-strength classification.
+
+Assessment now categorizes demonstrated requirements using:
+
+* strong
+* moderate
+* weak
+* none
+
+Evidence strength is derived from previously scored and ranked evidence.
+
+Coverage calculations remain unchanged.
+
+## Alternatives Considered
+
+* Let the LLM infer evidence strength
+* Recompute evidence quality inside assessment
+* Ignore evidence quality completely
+
+## Consequences
+
+### Positive
+
+* More explainable assessments
+* Better foundation for future claim validation
+* Reduced prompt responsibility
+* Preserved deterministic coverage calculations
+
+### Negative
+
+* Assessment now depends on evidence-quality metadata
+
+---
+
+# Future ADRs
+
+Future architectural decisions may include:
+
+* Allowed Claims Builder
+* Application Service Layer
+* REST API
+* Frontend Architecture
+* Multi-LLM Support
+* Retrieval-Augmented Generation (RAG)
+* Report Generation Pipeline

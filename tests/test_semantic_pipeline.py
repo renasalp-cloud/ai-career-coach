@@ -42,6 +42,7 @@ class SemanticPipelineTest(unittest.TestCase):
         self.assertEqual(len(demonstrated_match.evidence), 1)
         self.assertEqual(demonstrated_match.evidence[0].source, "skills")
         self.assertEqual(demonstrated_match.evidence[0].text, "Python")
+        self.assertEqual(demonstrated_match.evidence[0].quality_score, 15)
 
         missing_match = validated_matches[1]
         self.assertEqual(missing_match.role_skill, "Docker")

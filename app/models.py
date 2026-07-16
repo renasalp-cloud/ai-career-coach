@@ -41,6 +41,7 @@ class LearningWeek(BaseModel):
 class SkillEvidence(BaseModel):
     source: str
     text: str
+    quality_score: int | None = Field(default=None, ge=0, le=100)
 
 
 class SkillMatch(BaseModel):

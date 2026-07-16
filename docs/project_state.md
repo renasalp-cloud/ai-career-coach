@@ -3,13 +3,13 @@
 > This document is the primary source of truth for the current state of the AI Career Coach project.
 > All development conversations should begin by reviewing this file.
 
-Last Updated: 2026-07-15
+Last Updated: 2026-07-16
 
 ---
 
 # Current Sprint
 
-Sprint 14 — Generic Requirement Processing Pipeline
+Sprint 15 — Evidence Intelligence and Requirement Decomposition
 
 Status:
 Completed
@@ -32,22 +32,40 @@ Candidate Profile Extractor
 Candidate Profile Normalizer
 ↓
 CandidateProfile
-                         Requirement Source
-                         ↓
-                         Requirement Loader
-                         ↓
-                         Requirement Extractor
-                         ↓
-                         Requirement Normalizer
-                         ↓
-                         Requirement Validator
-                         ↓
-                         RequirementProfile
+
+Requirement Source
+↓
+Requirement Loader
+↓
+Requirement Extractor
+↓
+Requirement Decomposer
+↓
+Requirement Normalizer
+↓
+Requirement Validator
+↓
+RequirementProfile
+
+CandidateProfile
+↓
+Candidate Evidence Collector
+↓
+Structured Candidate Evidence
+↓
+Evidence Quality Scorer
+↓
+Scored Candidate Evidence
+↓
+Evidence Ranker
+↓
+Ranked Candidate Evidence
+
 CandidateProfile
         +
 RequirementProfile
-↓
-Candidate Evidence Collector
+        +
+Ranked Candidate Evidence
 ↓
 Skill Matcher
 ↓
@@ -55,7 +73,7 @@ Skill Validator
 ↓
 Validated Skill Matches
 ↓
-Requirement Assessment Engine
+Evidence-Aware Requirement Assessment
 ↓
 Prompt Builder
 ↓
@@ -92,135 +110,240 @@ CLI Output
 * ✅ Sprint 12 — Generic Candidate Profile Extraction
 * ✅ Sprint 13 — Analysis Quality and Semantic Gap Validation
 * ✅ Sprint 14 — Generic Requirement Processing Pipeline
+* ✅ Sprint 15 — Evidence Intelligence and Requirement Decomposition
 
 ---
 
-# Sprint 14 Deliverables
+# Sprint 15 Deliverables
 
-* ✅ Generic `RequirementSource` model
-* ✅ Pasted job-description source support
-* ✅ TXT requirement source support
-* ✅ Requirement Source Loader
-* ✅ Generic Requirement Extractor
-* ✅ Common job-description section heading support
-* ✅ Bulleted requirement extraction
-* ✅ Non-bulleted requirement extraction
-* ✅ Responsibility section exclusion
-* ✅ Requirement Profile Normalizer
-* ✅ Duplicate requirement removal
-* ✅ Requirement Profile Validator
-* ✅ Empty requirement profile rejection
-* ✅ Unsupported priority validation
-* ✅ Requirement Pipeline orchestration
-* ✅ Dependency-injected pipeline components
-* ✅ Analyzer integration with `RequirementProfile`
-* ✅ Static role-profile loading removed from Analyzer
-* ✅ CLI requirement source selection
-* ✅ Multiline pasted job-description input
-* ✅ Deterministic Requirement Assessment Engine
-* ✅ Overall coverage calculation
-* ✅ Required, preferred, and optional coverage calculation
-* ✅ Deterministic missing requirement grouping
-* ✅ Requirement Assessment prompt context
-* ✅ Requirement terminology cleanup in Prompt Builder
-* ✅ Real-world job-description CLI validation
-* ✅ 135 automated tests passing
+## Requirement Decomposition
+
+* ✅ Deterministic atomic requirement decomposition
+* ✅ Compound requirement splitting
+* ✅ Comma-separated requirement decomposition
+* ✅ Semicolon-separated requirement decomposition
+* ✅ Safe conjunction decomposition
+* ✅ Spaced slash-separated requirement decomposition
+* ✅ Generic wrapper removal
+* ✅ Requirement priority preservation
+* ✅ Requirement Profile metadata preservation
+* ✅ Duplicate atomic requirement removal
+* ✅ Input profile immutability
+* ✅ Protected phrase preservation
+* ✅ Protected phrase preservation inside larger requirement lists
+* ✅ Ambiguous verb-phrase protection
+* ✅ Requirement Decomposer pipeline integration
+* ✅ Dependency-injected decomposer support
+
+## Structured Candidate Evidence
+
+* ✅ Generic `CandidateEvidence` model
+* ✅ Validated evidence source types
+* ✅ Work-experience evidence collection
+* ✅ Project evidence collection
+* ✅ Education evidence collection
+* ✅ Certification evidence collection
+* ✅ Skills-section evidence collection
+* ✅ Candidate-summary evidence support
+* ✅ Other candidate-section evidence support
+* ✅ Deterministic evidence ordering
+* ✅ Exact duplicate evidence removal
+* ✅ Distinct same-skill evidence preservation
+* ✅ Candidate Profile immutability
+* ✅ Source-label encoding cleanup
+
+## Evidence Quality Scoring
+
+* ✅ Validated `ScoredCandidateEvidence` model
+* ✅ Deterministic evidence quality scoring
+* ✅ Generic evidence source weighting
+* ✅ Action-signal detection
+* ✅ Practical activity evidence weighting
+* ✅ Conservative skills-declaration scoring
+* ✅ Explainable quality factors
+* ✅ Score boundary validation
+* ✅ Deterministic batch scoring
+* ✅ Input order preservation
+* ✅ Evidence immutability
+
+## Evidence Ranking
+
+* ✅ Deterministic evidence ranking
+* ✅ Quality-score descending ordering
+* ✅ Stable equal-score ordering
+* ✅ Case-insensitive skill grouping
+* ✅ First-seen group-order preservation
+* ✅ Ranking within evidence groups
+* ✅ Bounded top-evidence selection
+* ✅ Invalid selection-limit rejection
+* ✅ Distinct evidence preservation
+* ✅ Input collection immutability
+
+## Semantic Integration
+
+* ✅ Structured evidence integration into Skill Matcher
+* ✅ Evidence scoring before final selection
+* ✅ Evidence ranking before final selection
+* ✅ Relevant-evidence filtering
+* ✅ Strongest-evidence-first output
+* ✅ Configurable evidence limit
+* ✅ Dependency-injected evidence scorer
+* ✅ Dependency-injected evidence ranker
+* ✅ Final-boundary legacy evidence conversion
+* ✅ Existing exact matching preservation
+* ✅ Existing alias matching preservation
+* ✅ Existing practical-experience matching preservation
+* ✅ Existing action-evidence rules preservation
+* ✅ Requirement-order preservation
+* ✅ Deterministic repeated matching
+
+## Evidence-Aware Requirement Assessment
+
+* ✅ Evidence-strength classification
+* ✅ Strong evidence classification
+* ✅ Moderate evidence classification
+* ✅ Weak evidence classification
+* ✅ Missing-evidence classification
+* ✅ Strongest selected evidence determines strength
+* ✅ Duplicate evidence does not inflate strength
+* ✅ Existing demonstrated and missing statuses preserved
+* ✅ Existing coverage calculations preserved
+* ✅ Required coverage preservation
+* ✅ Preferred coverage preservation
+* ✅ Optional coverage preservation
+* ✅ Missing requirement grouping preservation
+* ✅ Assessment input immutability
+* ✅ Prompt Builder compatibility
+* ✅ Analyzer and CLI compatibility
+
+## Generic Validation Improvements
+
+* ✅ Requirement section-heading leakage prevention
+* ✅ `Preferred` heading filtering
+* ✅ `Requirements` heading filtering
+* ✅ `Responsibilities` heading filtering
+* ✅ Written and verbal communication preservation
+* ✅ Malformed adjective-fragment prevention
+* ✅ Existing `Problem solving` skill matching correction
+* ✅ Clean recommendation requirement inputs
+* ✅ Clean learning-roadmap requirement inputs
+* ✅ Non-technical role validation
 
 ---
 
-# Sprint 14 Validation Result
+# Sprint 15 Validation Result
 
 Verified with:
 
-* Pasted job descriptions
-* TXT requirement sources
-* Generic requirement source loading
-* Common job-description headings
-* Bulleted and non-bulleted requirement lines
-* Requirement normalization
-* Requirement validation
-* Requirement pipeline orchestration
-* Analyzer consumption of `RequirementProfile`
-* Candidate evidence collection
-* Exact and alias-based skill matching
-* Skill validation
-* Deterministic requirement assessment
+* Compound requirement sentences
+* Atomic requirement decomposition
+* Protected phrases
+* Ambiguous verb conjunctions
+* Structured evidence from candidate-profile sections
+* Evidence source typing
+* Evidence quality scoring
+* Evidence quality explanations
+* Stable evidence ranking
+* Grouped evidence ranking
+* Top-evidence selection
+* Structured evidence integration into semantic matching
+* Exact skill matching
+* Alias-based skill matching
+* Practical-experience matching
+* Action-evidence matching
+* Evidence-aware requirement assessment
+* Strong, moderate, weak, and missing evidence classifications
+* Existing deterministic coverage calculations
+* Generic section-heading filtering
+* AI Engineer job descriptions
+* Office Administrator job descriptions
+* Profession-agnostic CLI analysis
 * Structured LLM response generation
 * Output normalization
 * Pydantic validation
 * Validation repair
 * Deterministic consistency processing
 * CLI presentation
-* A real AI Engineer job description
 
-Latest test result:
+Latest confirmed automated test result:
 
 ```text
-135 passed in 0.88s
+195 passed in 1.00s
 ```
+
+Real-world validation confirmed that the same analysis pipeline can process both technical and non-technical target roles without relying on a static role catalog.
 
 ---
 
 # Current Work
 
-Sprint 14 implementation is complete.
+Sprint 15 implementation and real-world validation are complete.
 
 Remaining closure tasks:
 
-* Review staged Sprint 14 files
+* Review all Sprint 15 changed files
 * Exclude local development automation files from the commit
 * Update architecture documentation
 * Update architectural decisions
 * Run the final complete test suite
-* Commit Sprint 14 changes
-* Push Sprint 14 to origin
+* Stage Sprint 15 project files
+* Commit Sprint 15 changes
+* Push Sprint 15 to origin
 
-Local-only development automation files must not be committed:
+Local-only development automation and debug files must not be committed:
 
 ```text
 AGENTS.md
 run_codex.ps1
 tasks/
+debug/
 ```
 
 ---
 
 # Next Sprint
 
-Sprint 15 — Evidence Intelligence and Requirement Decomposition
+Sprint 16 — Application Service and API Layer
 
 Proposed scope:
 
-* Requirement decomposition into atomic skills
-* Evidence quality scoring
-* Evidence ranking
-* Experience-source weighting
-* Seniority-safe professional summaries
-* Unsupported summary claim prevention
-* Stronger evidence-based strength selection
-* Improved recommendation action quality
-* Improved learning roadmap task quality
+* Unsupported candidate-claim prevention
+* Deterministic allowed-claims construction
+* Application service layer
+* Separation of CLI presentation from application orchestration
+* Reusable analysis request and response boundary
+* FastAPI integration
+* CV upload endpoint
+* Pasted requirement-text endpoint support
+* TXT requirement-source endpoint support
+* API validation and error handling
+* Frontend-ready backend architecture
+* Preservation of local Ollama support
+* Provider-independent application boundary
 
 ---
 
 # Known Issues
 
-* Requirement extraction currently preserves complete requirement sentences instead of decomposing them into atomic skills.
-* Compound requirement lines may contain multiple technologies or concepts in one requirement.
-* Evidence quality is not scored.
-* Skills listed in the CV and skills demonstrated through experience are not yet weighted differently.
-* Professional summaries may contain unsupported seniority or research claims from the LLM.
-* Strength selection may prioritize weakly relevant skills over stronger evidence.
-* Overall coverage is deterministic but depends on the granularity of extracted requirements.
+* Professional summaries may still contain unsupported seniority, production, leadership, or research claims generated by the LLM.
+* An explicit allowed-claims model has not yet been implemented.
+* Partial semantic skill matching is not implemented.
+* Semantic alias coverage is limited.
+* Related but non-equivalent tools may not match without an explicit alias.
+* Evidence `skill` values may use complete source text when a separate concept cannot be extracted deterministically.
+* Some ambiguous compound requirements may intentionally remain undecomposed.
+* Evidence-source weighting uses initial generic rules and may require future calibration.
+* Evidence strength does not currently redefine demonstrated or missing status.
 * Experience parsing supports a limited number of CV layouts.
 * Education parsing supports a limited number of formats.
 * Candidate Profile summary extraction is not implemented.
 * Language extraction may include proficiency-label fragments.
-* Semantic alias coverage is limited.
-* Partial skill matching is not implemented.
 * Recommendation fallback wording can be generic.
 * Learning roadmap fallback tasks can be generic.
 * Detected CV section previews are truncated in CLI output.
+* Application logic is still invoked through the CLI rather than a reusable application service.
+* A REST API is not yet implemented.
+* A frontend is not yet implemented.
 
 ---
 
@@ -238,6 +361,11 @@ Proposed scope:
 * ADR-011 — Generic Requirement Pipeline
 * ADR-012 — Requirement Validation Pipeline
 * ADR-013 — Deterministic Requirement Assessment
+* ADR-014 — Atomic Requirement Decomposition
+* ADR-015 — Structured Candidate Evidence
+* ADR-016 — Deterministic Evidence Quality Scoring
+* ADR-017 — Deterministic Evidence Ranking
+* ADR-018 — Evidence-Aware Requirement Assessment
 
 Superseded:
 
@@ -259,9 +387,17 @@ The system should:
 * Keep business logic outside prompts.
 * Minimize LLM responsibility through deterministic pipelines.
 * Use semantic matching instead of simple keyword matching.
-* Score and rank candidate evidence.
+* Collect structured candidate evidence.
+* Score candidate evidence deterministically.
+* Rank evidence before matching and assessment.
+* Distinguish demonstrated evidence from skills-section declarations.
+* Expose evidence strength in requirement assessment.
 * Produce explainable conclusions supported by candidate evidence.
 * Prevent unsupported seniority and experience claims.
+* Provide a reusable application service.
+* Expose analysis through a validated REST API.
+* Support a modern frontend.
+* Preserve local and open-source model support.
 * Remain provider-agnostic.
 * Remain modular and easily extensible.
 
@@ -277,16 +413,26 @@ The system should:
 * Generic extraction first
 * Deterministic processing before AI reasoning
 * Semantic normalization before matching
+* Requirement decomposition before normalization
 * Requirement validation before assessment
+* Evidence collection remains independent from requirements
+* Evidence scoring remains independent from target roles
+* Evidence ranking remains independent from semantic matching
+* Evidence relevance is established before final evidence selection
 * Prompts do not own business logic
 * Prompt Builder only assembles context
 * Analyzer only orchestrates components
 * LLM generates explanations and presentation
 * Deterministic components establish facts
 * Requirement Assessment owns coverage calculations
+* Requirement Assessment exposes evidence strength
+* Evidence volume must not inflate evidence strength
 * Output normalization repairs structure, not analysis
 * Pydantic models define response contracts
 * Unsupported candidate claims must not be introduced
 * Demonstrated skills must not be reported as missing
 * Missing skills must be traceable to validated requirement data
+* Evidence attached to matches must be relevant
+* Stronger relevant evidence must be preferred over weaker evidence
+* Application interfaces must not depend on a specific AI provider
 * Every architectural change should reduce LLM responsibility

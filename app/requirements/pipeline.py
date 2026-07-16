@@ -3,6 +3,7 @@
 from collections.abc import Callable
 
 from app.models import RequirementProfile
+from app.requirements.decomposer import RequirementDecomposer
 from app.requirements.extractor import extract_requirement_profile
 from app.requirements.loader import RequirementSourceLoader
 from app.requirements.normalizer import RequirementProfileNormalizer
@@ -20,11 +21,13 @@ class RequirementPipeline:
         self,
         loader: RequirementSourceLoader | None = None,
         extractor: RequirementExtractor | None = None,
+        decomposer: RequirementDecomposer | None = None,
         normalizer: RequirementProfileNormalizer | None = None,
         validator: RequirementProfileValidator | None = None,
     ) -> None:
         self._loader = loader or RequirementSourceLoader()
         self._extractor = extractor or extract_requirement_profile
+        self._decomposer = decomposer or RequirementDecomposer()
         self._normalizer = normalizer or RequirementProfileNormalizer()
         self._validator = validator or RequirementProfileValidator()
 
@@ -33,5 +36,6 @@ class RequirementPipeline:
         requirement_text = self._loader.load(source)
         target_role = source.target_role or ""
         extracted_profile = self._extractor(target_role, requirement_text)
-        normalized_profile = self._normalizer.normalize(extracted_profile)
+        decomposed_profile = self._decomposer.decompose(extracted_profile)
+        normalized_profile = self._normalizer.normalize(decomposed_profile)
         return self._validator.validate(normalized_profile)
