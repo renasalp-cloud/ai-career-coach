@@ -3,13 +3,13 @@
 > This document is the primary source of truth for the current state of the AI Career Coach project.
 > All development conversations should begin by reviewing this file.
 
-Last Updated: 2026-07-16
+Last Updated: 2026-07-26
 
 ---
 
 # Current Sprint
 
-Sprint 15 — Evidence Intelligence and Requirement Decomposition
+Sprint 16 — Claim Safety and Analysis Reliability
 
 Status:
 Completed
@@ -45,9 +45,9 @@ Requirement Normalizer
 ↓
 Requirement Validator
 ↓
-RequirementProfile
-
 CandidateProfile
+        +
+RequirementProfile
 ↓
 Candidate Evidence Collector
 ↓
@@ -75,6 +75,10 @@ Validated Skill Matches
 ↓
 Evidence-Aware Requirement Assessment
 ↓
+Allowed Claims Builder
+↓
+Allowed Claims
+↓
 Prompt Builder
 ↓
 LLM
@@ -86,6 +90,8 @@ Output Normalizer
 Pydantic Validation
 ↓
 Validation Repair
+↓
+Unsupported Claims Validator
 ↓
 Deterministic Consistency Processor
 ↓
@@ -111,6 +117,7 @@ CLI Output
 * ✅ Sprint 13 — Analysis Quality and Semantic Gap Validation
 * ✅ Sprint 14 — Generic Requirement Processing Pipeline
 * ✅ Sprint 15 — Evidence Intelligence and Requirement Decomposition
+* ✅ Sprint 16 — Claim Safety and Analysis Reliability
 
 ---
 
@@ -275,48 +282,228 @@ Real-world validation confirmed that the same analysis pipeline can process both
 
 ---
 
+# Sprint 16 Deliverables
+
+## Allowed Claims Model
+
+* ✅ Generic `AllowedClaim` model
+* ✅ Generic `AllowedClaims` collection
+* ✅ Structured claim categorization
+* ✅ Claim source preservation
+* ✅ Claim confidence support
+* ✅ Generic claim metadata
+* ✅ Pydantic validation
+* ✅ Input immutability
+* ✅ Prompt Builder compatibility
+* ✅ Analyzer compatibility
+
+## Allowed Claims Builder
+
+* ✅ Deterministic allowed-claim construction
+* ✅ Candidate Profile integration
+* ✅ Requirement Assessment integration
+* ✅ Ranked Candidate Evidence integration
+* ✅ Demonstrated requirement filtering
+* ✅ Evidence-backed claim generation
+* ✅ Unsupported requirement exclusion
+* ✅ Duplicate claim removal
+* ✅ Stable deterministic ordering
+* ✅ Dependency injection support
+* ✅ Builder output validation
+* ✅ Existing pipeline compatibility
+
+## Prompt Context Improvements
+
+* ✅ Allowed Claims integration into Prompt Builder
+* ✅ Explicit claim-boundary context
+* ✅ Deterministic requirement-status context
+* ✅ Evidence-strength exposure
+* ✅ Structured claim serialization
+* ✅ Prompt size optimization
+* ✅ Existing prompt compatibility
+* ✅ Provider-independent prompt structure
+
+## Unsupported Claims Validation
+
+* ✅ Generic Unsupported Claims Validator
+* ✅ Claim-to-evidence verification
+* ✅ Unsupported strength detection
+* ✅ Unsupported recommendation detection
+* ✅ Unsupported summary detection
+* ✅ Unsupported experience detection
+* ✅ Requirement-status verification
+* ✅ Safe validation failure handling
+* ✅ Analyzer integration
+* ✅ Existing validation compatibility
+
+## CareerAnalysis Reliability
+
+* ✅ Explicit CareerAnalysis schema contract
+* ✅ Integer score enforcement
+* ✅ Structured object enforcement
+* ✅ Nested collection validation
+* ✅ Required collection validation
+* ✅ Learning roadmap minimum-size enforcement
+* ✅ Improved validation repair instructions
+* ✅ Complete JSON regeneration during repair
+* ✅ Single repair-attempt preservation
+
+## Deterministic Requirement Authority
+
+* ✅ Requirement Assessment designated as authoritative
+* ✅ Demonstrated requirements protected from reinterpretation
+* ✅ Missing requirements protected from reinterpretation
+* ✅ Requirement priority preservation
+* ✅ Deterministic assessment exposed to the LLM
+* ✅ Prompt-level authority rules
+* ✅ Repair-prompt authority rules
+
+## Evidence Preservation
+
+* ✅ Exact evidence preservation
+* ✅ Near-verbatim evidence support
+* ✅ Unsupported evidence rejection
+* ✅ Prevention of fabricated experience
+* ✅ Prevention of fabricated projects
+* ✅ Prevention of fabricated employers
+* ✅ Prevention of fabricated responsibilities
+* ✅ Prevention of fabricated seniority
+* ✅ Prevention of fabricated production experience
+
+## Prompt Repair Improvements
+
+* ✅ Full schema supplied during repair
+* ✅ Validation errors included
+* ✅ Allowed Claims included
+* ✅ Requirement Assessment included
+* ✅ Requirement-authority rules included
+* ✅ Evidence-preservation rules included
+* ✅ Complete response regeneration
+* ✅ Patch-style responses prohibited
+
+## End-to-End Integration
+
+* ✅ Analyzer integration
+* ✅ Prompt Builder integration
+* ✅ Validation pipeline compatibility
+* ✅ Output Normalizer compatibility
+* ✅ Unsupported Claims Validator compatibility
+* ✅ Deterministic Consistency Processor compatibility
+* ✅ CLI compatibility
+* ✅ Provider-independent architecture preservation
+
+## Analyzer Integration
+
+* ✅ Allowed Claims Builder orchestration
+* ✅ Unsupported Claims Validator orchestration
+* ✅ Existing analyzer flow preservation
+* ✅ Single repair-attempt preservation
+* ✅ End-to-end deterministic pipeline compatibility
+
+## Real-World Validation
+
+* ✅ Real AI Engineer job description validation
+* ✅ Real project CV validation
+* ✅ End-to-end CLI execution
+* ✅ Schema-valid CareerAnalysis generation
+* ✅ Validation repair verification
+* ✅ Unsupported Claims validation verification
+
+# Sprint 16 Validation Result
+
+Verified with:
+
+* Allowed Claims generation
+* Allowed Claims Builder
+* Evidence-backed claim construction
+* Prompt Builder integration
+* CareerAnalysis schema enforcement
+* Integer score validation
+* Structured strengths validation
+* Structured recommendations validation
+* Structured career-gap validation
+* Learning-roadmap minimum-length validation
+* Validation repair prompt improvements
+* Complete JSON regeneration during repair
+* Unsupported Claims validation
+* Requirement Assessment authority
+* Evidence-preservation rules
+* Prompt-level deterministic guidance
+* Analyzer integration
+* Output normalization
+* Pydantic validation
+* Validation repair
+* Deterministic consistency processing
+* Real AI Engineer job description
+* Real project CV
+* Profession-agnostic CLI analysis
+* Real Office Administrator job description
+
+Latest confirmed automated test result:
+
+```text
+235 passed in 1.13s
+```
+
+Real-world validation confirmed that the complete analysis pipeline successfully processes real candidate CVs and real job descriptions while preserving deterministic requirement assessment, structured evidence, claim safety, and schema reliability.
+
+The analyzer now successfully completes:
+
+* Candidate Profile extraction
+* Requirement extraction
+* Evidence collection
+* Evidence scoring
+* Evidence ranking
+* Semantic matching
+* Requirement assessment
+* Allowed Claims generation
+* Prompt generation
+* Structured JSON generation
+* Output normalization
+* Pydantic validation
+* Validation repair
+* Unsupported Claims validation
+* Deterministic consistency processing
+* CLI presentation
+
+---
+
 # Current Work
 
-Sprint 15 implementation and real-world validation are complete.
+Sprint 16 implementation and real-world validation are complete.
 
 Remaining closure tasks:
 
-* Review all Sprint 15 changed files
-* Exclude local development automation files from the commit
+* Review all Sprint 16 changed files
 * Update architecture documentation
 * Update architectural decisions
+* Update project state documentation
 * Run the final complete test suite
-* Stage Sprint 15 project files
-* Commit Sprint 15 changes
-* Push Sprint 15 to origin
+* Stage Sprint 16 project files
+* Commit Sprint 16 changes
+* Push Sprint 16 to origin
 
-Local-only development automation and debug files must not be committed:
-
-```text
-AGENTS.md
-run_codex.ps1
-tasks/
-debug/
-```
 
 ---
 
 # Next Sprint
 
-Sprint 16 — Application Service and API Layer
+Sprint 17 — Application Service and REST API
 
 Proposed scope:
 
-* Unsupported candidate-claim prevention
-* Deterministic allowed-claims construction
-* Application service layer
-* Separation of CLI presentation from application orchestration
-* Reusable analysis request and response boundary
+* Application Service layer
+* Separation of application orchestration from CLI
+* Analysis request model
+* Analysis response model
 * FastAPI integration
+* REST API endpoints
 * CV upload endpoint
-* Pasted requirement-text endpoint support
-* TXT requirement-source endpoint support
-* API validation and error handling
+* Requirement-text endpoint
+* TXT requirement endpoint
+* API validation
+* API error handling
+* OpenAPI / Swagger support
 * Frontend-ready backend architecture
 * Preservation of local Ollama support
 * Provider-independent application boundary
@@ -325,28 +512,25 @@ Proposed scope:
 
 # Known Issues
 
-* Professional summaries may still contain unsupported seniority, production, leadership, or research claims generated by the LLM.
-* An explicit allowed-claims model has not yet been implemented.
-* Partial semantic skill matching is not implemented.
-* Semantic alias coverage is limited.
-* Related but non-equivalent tools may not match without an explicit alias.
-* Evidence `skill` values may use complete source text when a separate concept cannot be extracted deterministically.
-* Some ambiguous compound requirements may intentionally remain undecomposed.
-* Evidence-source weighting uses initial generic rules and may require future calibration.
-* Evidence strength does not currently redefine demonstrated or missing status.
+* Requirement extraction may classify benefit sections as requirements.
+* Composite degree requirements may be decomposed too aggressively.
+* Partial semantic skill matching remains conservative for related competencies.
+* Semantic alias coverage is still limited.
+* Related but non-equivalent technologies may require additional aliases.
+* Evidence-source weighting may require future calibration.
+* Candidate Profile summary extraction is not implemented.
 * Experience parsing supports a limited number of CV layouts.
 * Education parsing supports a limited number of formats.
-* Candidate Profile summary extraction is not implemented.
 * Language extraction may include proficiency-label fragments.
-* Recommendation fallback wording can be generic.
-* Learning roadmap fallback tasks can be generic.
+* Recommendation quality depends on validated requirement extraction.
+* Some roadmap recommendations remain generic.
 * Detected CV section previews are truncated in CLI output.
-* Application logic is still invoked through the CLI rather than a reusable application service.
-* A REST API is not yet implemented.
-* A frontend is not yet implemented.
+* Application logic is still invoked through the CLI rather than a reusable Application Service.
+* REST API is not yet implemented.
+* Frontend is not yet implemented.
+* Requirement assessment may conservatively classify demonstrated skills as missing when semantic equivalence is not yet recognized.
 
 ---
-
 # Active ADRs
 
 * ADR-001 — Layered Architecture
@@ -366,10 +550,14 @@ Proposed scope:
 * ADR-016 — Deterministic Evidence Quality Scoring
 * ADR-017 — Deterministic Evidence Ranking
 * ADR-018 — Evidence-Aware Requirement Assessment
+* ADR-019 — Allowed Claims
+* ADR-020 — Unsupported Claims Validation
+* ADR-021 — Deterministic Requirement Assessment Authority
 
 Superseded:
 
 * ADR-004 — Role Profiles
+
   Superseded by ADR-011. Static role profiles are no longer the primary requirement source.
 
 ---
@@ -393,13 +581,16 @@ The system should:
 * Distinguish demonstrated evidence from skills-section declarations.
 * Expose evidence strength in requirement assessment.
 * Produce explainable conclusions supported by candidate evidence.
-* Prevent unsupported seniority and experience claims.
-* Provide a reusable application service.
+* Prevent unsupported candidate claims.
+* Restrict generated conclusions to deterministic evidence.
+* Preserve deterministic requirement assessment authority.
+* Provide a reusable Application Service.
 * Expose analysis through a validated REST API.
 * Support a modern frontend.
 * Preserve local and open-source model support.
 * Remain provider-agnostic.
 * Remain modular and easily extensible.
+* Improve deterministic semantic equivalence across related technologies and educational backgrounds.
 
 ---
 
@@ -410,29 +601,60 @@ The system should:
 * No company-specific rules
 * No university-specific rules
 * No static role catalog dependency
+
 * Generic extraction first
 * Deterministic processing before AI reasoning
-* Semantic normalization before matching
+
 * Requirement decomposition before normalization
 * Requirement validation before assessment
+
+* Semantic normalization before matching
+
 * Evidence collection remains independent from requirements
 * Evidence scoring remains independent from target roles
 * Evidence ranking remains independent from semantic matching
 * Evidence relevance is established before final evidence selection
-* Prompts do not own business logic
+
 * Prompt Builder only assembles context
 * Analyzer only orchestrates components
+* Prompts do not own business logic
+
 * LLM generates explanations and presentation
 * Deterministic components establish facts
+
 * Requirement Assessment owns coverage calculations
+* Requirement Assessment is the authoritative source for requirement status
 * Requirement Assessment exposes evidence strength
-* Evidence volume must not inflate evidence strength
-* Output normalization repairs structure, not analysis
-* Pydantic models define response contracts
+* Demonstrated requirements must never be reinterpreted as missing
+* Missing requirements must never be reinterpreted as demonstrated
+
+* Allowed Claims define the maximum claim boundary
+* Every generated claim must be supported by deterministic evidence
 * Unsupported candidate claims must not be introduced
-* Demonstrated skills must not be reported as missing
-* Missing skills must be traceable to validated requirement data
+* Unsupported claims must be rejected before final output
+
 * Evidence attached to matches must be relevant
 * Stronger relevant evidence must be preferred over weaker evidence
+* Evidence volume must not inflate evidence strength
+* Evidence must remain traceable to deterministic sources
+
+* Output normalization repairs structure, not analysis
+* Validation repair preserves the complete response contract
+* Pydantic models define response contracts
+
+* Prompt engineering supports deterministic business logic but never replaces it
+
 * Application interfaces must not depend on a specific AI provider
+
 * Every architectural change should reduce LLM responsibility
+* Business logic owns factual decisions.
+* The LLM explains deterministic decisions but does not redefine them.
+
+---
+
+# Project Status
+The project has completed the core deterministic backend architecture.
+
+The remaining backend work primarily focuses on application orchestration and delivery rather than core analysis logic.
+
+The next phase transitions the project from a command-line application to a reusable backend service through an Application Service layer, REST API, and frontend integration.

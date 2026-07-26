@@ -9,12 +9,17 @@ from app.analysis.output_normalizer import normalize_career_analysis_output
 from app.assessment.requirement_assessment import RequirementAssessmentEngine
 from app.models import CareerAnalysis, RequirementProfile
 from app.analysis.consistency_processor import AnalysisConsistencyProcessor
+from app.claims.allowed_claims_builder import AllowedClaimsBuilder
+from app.claims.unsupported_claims_validator import UnsupportedClaimsValidator
 from app.cv_parser import parse_cv
 from app.ai.prompt_builder import PromptContext, build_cv_analysis_prompt
 from app.candidate_profile.models import CandidateProfile
 from app.candidate_profile.extractor import extract_candidate_profile
 from app.candidate_profile.normalizer import normalize_candidate_profile
+from app.evidence.ranker import EvidenceRanker
+from app.evidence.scorer import EvidenceQualityScorer
 from app.semantic.default_aliases import build_default_skill_alias_registry
+from app.semantic.evidence_collector import CandidateEvidenceCollector
 from app.semantic.matcher import SkillMatcher
 from app.semantic.validator import SkillValidator
 
@@ -24,17 +29,6 @@ from app.ai.ollama_provider import generate
 PROMPT_PATH = Path("app/prompts/cv_analysis.txt")
 
 DEBUG_ARTIFACT_PATH = Path("debug/last_failed_analysis.json")
-
-CAREER_ANALYSIS_ROOT_KEYS = {
-    "overall_match_score",
-    "professional_summary",
-    "strengths",
-    "missing_skills",
-    "career_gap_analysis",
-    "recommendations",
-    "learning_roadmap",
-}
-
 
 class CareerAnalysisGenerationError(RuntimeError):
     """Raised when the provider cannot produce a valid CareerAnalysis response."""
@@ -143,7 +137,7 @@ The previous CareerAnalysis response did not match the required JSON schema.
 Repair formatting and structure only. Preserve the facts and analysis in the
 previous response. Do not regenerate the analysis or create a new candidate profile.
 
-Return ONLY one valid CareerAnalysis JSON object.
+Return the complete corrected JSON object.
 
 Do not return input structures such as:
 - candidate_profile
@@ -155,7 +149,28 @@ Do not use markdown.
 Do not use code fences.
 Do not add explanations.
 Do not omit any required key.
+Do not return a patch.
+Do not explain the changes.
+Do not omit valid fields.
 Do not invent unsupported facts.
+Regenerate the complete response so it conforms to the entire schema, not only
+the fields named in the validation errors.
+
+RequirementAssessment is authoritative.
+A requirement marked demonstrated must not appear as missing.
+A requirement marked missing must not be described as supported.
+A preferred or optional requirement must preserve its original priority.
+The LLM may explain deterministic statuses but must not change them.
+
+Strength evidence must use exact source text or a conservative near-verbatim
+excerpt from the supplied supporting evidence. Do not invent evidence summaries,
+projects, employers, responsibilities, metrics, professional-use claims, duration,
+or seniority. A declared_only claim must be described as declared, not as
+demonstrated or professional experience.
+
+overall_match_score must be an integer from 0 through 100. Never use a decimal
+ratio such as 0.65.
+learning_roadmap must contain at least 4 entries.
 
 Original analysis request:
 <ORIGINAL_REQUEST>
@@ -173,15 +188,6 @@ Validation errors:
 Required schema:
 {_career_analysis_schema()}
 """
-
-
-def _has_required_root_keys(json_text: str) -> bool:
-    try:
-        response = json.loads(json_text)
-    except (json.JSONDecodeError, TypeError):
-        return False
-
-    return isinstance(response, dict) and CAREER_ANALYSIS_ROOT_KEYS.issubset(response)
 
 
 def _validate_or_repair_analysis(
@@ -242,16 +248,6 @@ def _validate_analysis_response(
     json_text: str,
     original_prompt: str,
 ) -> CareerAnalysis:
-    if not _has_required_root_keys(json_text):
-        retry_response_text = generate(original_prompt)
-        json_text = extract_json(retry_response_text)
-
-        if not _has_required_root_keys(json_text):
-            raise CareerAnalysisGenerationError(
-                "LLM response did not contain the required CareerAnalysis root keys "
-                "after one retry."
-            )
-
     return _validate_or_repair_analysis(
         json_text=json_text,
         original_prompt=original_prompt,
@@ -262,6 +258,8 @@ def analyze_cv(
     cv_text: str,
     requirement_profile: RequirementProfile,
     cv_sections: dict[str, str] | None = None,
+    allowed_claims_builder: AllowedClaimsBuilder | None = None,
+    unsupported_claims_validator: UnsupportedClaimsValidator | None = None,
 ) -> AnalysisResult:
     """Analyze a CV against an already-built requirement profile."""
 
@@ -273,8 +271,17 @@ def analyze_cv(
     candidate_profile = extract_candidate_profile(cv_sections)
     candidate_profile = normalize_candidate_profile(candidate_profile)
 
+    evidence_collector = CandidateEvidenceCollector()
+    evidence_scorer = EvidenceQualityScorer()
+    evidence_ranker = EvidenceRanker()
+    ranked_candidate_evidence = evidence_ranker.rank(
+        evidence_scorer.score_all(evidence_collector.collect(candidate_profile))
+    )
     skill_matcher = SkillMatcher(
         alias_registry=build_default_skill_alias_registry(),
+        evidence_collector=evidence_collector,
+        evidence_scorer=evidence_scorer,
+        evidence_ranker=evidence_ranker,
     )
     skill_matches = skill_matcher.match(candidate_profile, requirement_profile)
     validated_skill_matches = SkillValidator().validate(skill_matches)
@@ -282,12 +289,20 @@ def analyze_cv(
         requirement_profile,
         validated_skill_matches,
     )
+    claim_builder = allowed_claims_builder or AllowedClaimsBuilder()
+    allowed_claims = claim_builder.build(
+        candidate_profile,
+        ranked_candidate_evidence,
+        validated_skill_matches,
+        requirement_assessment,
+    )
     prompt_context = PromptContext(
         template=prompt_template,
         requirement_profile=requirement_profile,
         candidate_profile=candidate_profile,
         validated_skill_matches=validated_skill_matches,
         requirement_assessment=requirement_assessment,
+        allowed_claims=allowed_claims,
     )
 
     prompt = build_cv_analysis_prompt(prompt_context)
@@ -305,6 +320,8 @@ def analyze_cv(
         requirement_profile,
         validated_skill_matches,
     )
+    claim_validator = unsupported_claims_validator or UnsupportedClaimsValidator()
+    analysis = claim_validator.validate(analysis, allowed_claims)
 
     return AnalysisResult(
         candidate_profile=candidate_profile,

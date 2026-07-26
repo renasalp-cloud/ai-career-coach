@@ -954,3 +954,28 @@ Future architectural decisions may include:
 * Multi-LLM Support
 * Retrieval-Augmented Generation (RAG)
 * Report Generation Pipeline
+
+# ADR-016 — Deterministic Requirement Assessment Authority
+
+**Date:** 2026-07-26
+
+**Status:** Accepted
+
+## Context
+
+Earlier analysis results allowed the LLM to reinterpret deterministic requirement assessment results, causing demonstrated skills or education to appear as missing.
+
+## Decision
+
+Requirement Assessment is the authoritative source for requirement status.
+
+The LLM may explain deterministic assessment results but must not change their classification.
+
+Evidence used in the final analysis must originate from the deterministic evidence pipeline and must not introduce unsupported claims.
+
+## Consequences
+
+- Increased consistency between deterministic assessment and generated analysis.
+- Reduced hallucinated strengths and missing skills.
+- Improved reliability of validation and repair.
+- Clear separation between business logic and LLM-generated explanations.

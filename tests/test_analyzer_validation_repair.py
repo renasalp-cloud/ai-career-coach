@@ -92,7 +92,7 @@ class AnalyzerValidationRepairTest(unittest.TestCase):
 
         self.assertEqual(analysis.overall_match_score, 80)
 
-    def test_wrong_root_retries_original_prompt_once_without_repair(self) -> None:
+    def test_wrong_root_uses_one_complete_schema_repair(self) -> None:
         prompts: list[str] = []
         original_generate = analyzer.generate
 
@@ -109,28 +109,35 @@ class AnalyzerValidationRepairTest(unittest.TestCase):
         finally:
             analyzer.generate = original_generate
 
-        self.assertEqual(prompts, ["original prompt"])
+        self.assertEqual(len(prompts), 1)
+        self.assertIn("Previous invalid response:", prompts[0])
+        self.assertIn("candidate_profile", prompts[0])
+        self.assertIn("Return the complete corrected JSON object.", prompts[0])
         self.assertEqual(analysis.overall_match_score, 80)
 
-    def test_wrong_root_after_retry_raises_clear_exception(self) -> None:
+    def test_wrong_root_failed_repair_raises_clear_exception(self) -> None:
         prompts: list[str] = []
         original_generate = analyzer.generate
 
         def fake_generate(prompt: str) -> str:
             prompts.append(prompt)
-            return "{}"
+            return json.dumps({"candidate_profile": {}})
 
-        try:
-            analyzer.generate = fake_generate
-            with self.assertRaisesRegex(
-                analyzer.CareerAnalysisGenerationError,
-                "required CareerAnalysis root keys after one retry",
-            ):
-                analyzer._validate_analysis_response("not json", "original prompt")
-        finally:
-            analyzer.generate = original_generate
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            try:
+                analyzer.generate = fake_generate
+                analyzer.DEBUG_ARTIFACT_PATH = (
+                    Path(temporary_directory) / "debug" / "last_failed_analysis.json"
+                )
+                with self.assertRaisesRegex(
+                    analyzer.CareerAnalysisGenerationError,
+                    "schema validation failed after one repair attempt",
+                ):
+                    analyzer._validate_analysis_response("{}", "original prompt")
+            finally:
+                analyzer.generate = original_generate
 
-        self.assertEqual(prompts, ["original prompt"])
+        self.assertEqual(len(prompts), 1)
 
     def test_invalid_analysis_json_triggers_one_successful_repair_attempt(self) -> None:
         invalid_json = json.dumps(
@@ -170,6 +177,10 @@ class AnalyzerValidationRepairTest(unittest.TestCase):
         self.assertIn("Do not return input structures such as:", prompts[0])
         self.assertIn("Validation errors:", prompts[0])
         self.assertIn("Required schema:", prompts[0])
+        self.assertIn("learning_roadmap must contain at least 4 entries", prompts[0])
+        self.assertIn("RequirementAssessment is authoritative", prompts[0])
+        self.assertIn("Do not return a patch.", prompts[0])
+        self.assertIn("Do not omit valid fields.", prompts[0])
         self.assertEqual(analysis.overall_match_score, 80)
         self.assertEqual(analysis.learning_roadmap[0].week, 1)
 
@@ -205,6 +216,52 @@ class AnalyzerValidationRepairTest(unittest.TestCase):
 
         self.assertEqual(len(prompts), 1)
         self.assertIn("Repair formatting and structure only", prompts[0])
+
+    def test_repair_with_fewer_than_four_roadmap_entries_still_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            with (
+                patch.object(analyzer, "generate", return_value=_invalid_response_json()),
+                patch.object(
+                    analyzer,
+                    "DEBUG_ARTIFACT_PATH",
+                    Path(temporary_directory) / "debug" / "last_failed_analysis.json",
+                ),
+                self.assertRaises(analyzer.CareerAnalysisGenerationError),
+            ):
+                analyzer._validate_analysis_response(
+                    _invalid_response_json(),
+                    "original prompt",
+                )
+
+    def test_schema_shape_failures_are_repaired_as_complete_response(self) -> None:
+        invalid = {
+            "overall_match_score": 0.65,
+            "professional_summary": "Candidate has relevant evidence.",
+            "strengths": ["Planning"],
+            "missing_skills": ["Deployment"],
+            "career_gap_analysis": [{"skill": "Deployment"}],
+            "recommendations": ["Practice deployment"],
+            "learning_roadmap": _learning_roadmap(2),
+        }
+        with patch.object(
+            analyzer,
+            "generate",
+            return_value=_complete_response_json(),
+        ) as generate:
+            result = analyzer._validate_analysis_response(
+                json.dumps(invalid),
+                "original prompt",
+            )
+
+        self.assertEqual(generate.call_count, 1)
+        self.assertIsInstance(result.overall_match_score, int)
+        self.assertEqual(result.strengths[0].title, "Python")
+        self.assertEqual(len(result.learning_roadmap), 4)
+        repair_prompt = generate.call_args.args[0]
+        self.assertIn('"strengths": [', repair_prompt)
+        self.assertIn('"Planning"', repair_prompt)
+        self.assertIn('"recommendations": [', repair_prompt)
+        self.assertIn('"Practice deployment"', repair_prompt)
 
     def test_failed_repair_preserves_original_validation_error(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:

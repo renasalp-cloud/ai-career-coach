@@ -22,6 +22,34 @@ Do not infer unsupported expertise.
 
 Treat missing information as unknown.
 
+Use only the provided allowed candidate claims when making positive candidate statements.
+
+Job requirements are role expectations, not candidate evidence.
+
+Do not use a job requirement as proof that the candidate has a skill or experience.
+
+Avoid unsupported assumptions and do not convert weak evidence into strong claims.
+
+Support levels have these exact meanings:
+
+- verified_fact: Directly stated structured candidate fact.
+- strong_evidence: Strong deterministic evidence exists.
+- moderate_evidence: Moderate deterministic evidence exists.
+- weak_evidence: Only weak deterministic evidence exists.
+- declared_only: Appears only as a declared skill and must not be described as demonstrated experience.
+
+Do not infer or upgrade a claim's support level.
+
+Distinguish declared-only skills from demonstrated skills.
+
+Do not make seniority, expertise-level, leadership, years-of-experience,
+production-experience, researcher-status, or scale-or-impact claims.
+
+Do not invent employers, projects, qualifications, responsibilities, dates,
+technologies, achievements, or metrics.
+
+Describe missing requirements as gaps instead of pretending the candidate has them.
+
 Follow the output schema exactly.
 
 Do not add, remove, rename, or reorder top-level fields.
@@ -39,6 +67,19 @@ Be objective and consistent.
 Prefer demonstrated evidence over candidate claims.
 
 Use the requirement assessment as the authority for coverage and missing requirement groups.
+
+RequirementAssessment is authoritative.
+
+A requirement marked demonstrated must not appear as missing.
+
+A requirement marked missing must not be described as supported.
+
+A preferred or optional requirement must preserve its original priority.
+
+You may explain deterministic statuses but must not change them.
+
+Do not override a demonstrated education requirement because the degree title
+is not textually identical to the role requirement.
 
 Use validated skill matches as the authority for supporting skill evidence.
 
@@ -74,6 +115,8 @@ Evaluate only alignment with the target role.
 
 The overall_match_score must be an integer from 0 to 100.
 
+Never use a decimal ratio such as 0.65.
+
 Set the score to requirement_assessment.overall_coverage_percentage.
 
 Do not calculate or adjust the score.
@@ -99,6 +142,18 @@ Include only strengths supported by candidate evidence.
 Keep strength titles concise.
 
 Make evidence specific and factual.
+
+Use exact source text or a conservative near-verbatim excerpt from the supplied
+supporting evidence.
+
+Do not invent evidence summaries.
+
+Do not introduce projects, employers, responsibilities, metrics,
+professional-use claims, duration, or seniority absent from the supplied evidence.
+
+For declared_only claims, state only that the skill is declared or listed.
+
+Never describe a declared_only claim as demonstrated use or professional experience.
 
 Do not repeat the same evidence in multiple strengths.
 
@@ -169,7 +224,9 @@ Do not create duplicate recommendations.
 
 Use an empty array when no recommendation is necessary.
 
-The learning_roadmap field must contain exactly four objects.
+The learning_roadmap field must contain at least four objects.
+
+Return exactly four objects for the current response contract.
 
 Each learning roadmap object must contain exactly:
 
