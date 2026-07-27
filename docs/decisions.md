@@ -979,3 +979,35 @@ Evidence used in the final analysis must originate from the deterministic eviden
 - Reduced hallucinated strengths and missing skills.
 - Improved reliability of validation and repair.
 - Clear separation between business logic and LLM-generated explanations.
+
+# ADR-017 — Introduce Application Layer
+
+**Date:** 2026-07-27
+
+**Status:** Accepted
+
+## Context
+
+The CLI directly orchestrated the complete CV analysis pipeline, making it difficult to introduce additional delivery mechanisms such as REST APIs while keeping business logic isolated.
+
+## Decision
+
+Introduce an Application Layer that exposes a single `ApplicationService` responsible for orchestrating the existing deterministic analysis pipeline.
+
+A dedicated composition root (`bootstrap.py`) constructs the dependency graph, while delivery adapters (CLI and future FastAPI) depend only on the application service.
+
+## Consequences
+
+Benefits:
+
+- Delivery adapters are independent of business orchestration.
+- The analysis pipeline remains deterministic.
+- Provider-specific wiring is isolated in the composition root.
+- Future delivery adapters (FastAPI, desktop UI, batch processing) can reuse the same application service.
+
+Trade-offs:
+
+- One additional architectural layer.
+- Dependency construction is centralized instead of being embedded in the CLI.
+
+This decision preserves the provider-agnostic and profession-agnostic architecture established in previous sprints.

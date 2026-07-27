@@ -9,19 +9,14 @@ Last Updated: 2026-07-26
 
 # Current Sprint
 
-Sprint 16 — Claim Safety and Analysis Reliability
+Sprint 17 — Application Layer & Delivery Architecture
 
 Status:
 Completed
 
 ---
 
-# Current Architecture
-
-```text
-Candidate CV
-↓
-PDF Reader
+PDF
 ↓
 Text Cleaner
 ↓
@@ -31,53 +26,9 @@ Candidate Profile Extractor
 ↓
 Candidate Profile Normalizer
 ↓
-CandidateProfile
-
-Requirement Source
+Requirement Pipeline
 ↓
-Requirement Loader
-↓
-Requirement Extractor
-↓
-Requirement Decomposer
-↓
-Requirement Normalizer
-↓
-Requirement Validator
-↓
-CandidateProfile
-        +
-RequirementProfile
-↓
-Candidate Evidence Collector
-↓
-Structured Candidate Evidence
-↓
-Evidence Quality Scorer
-↓
-Scored Candidate Evidence
-↓
-Evidence Ranker
-↓
-Ranked Candidate Evidence
-
-CandidateProfile
-        +
-RequirementProfile
-        +
-Ranked Candidate Evidence
-↓
-Skill Matcher
-↓
-Skill Validator
-↓
-Validated Skill Matches
-↓
-Evidence-Aware Requirement Assessment
-↓
-Allowed Claims Builder
-↓
-Allowed Claims
+Requirement Assessment
 ↓
 Prompt Builder
 ↓
@@ -85,17 +36,11 @@ LLM
 ↓
 Structured JSON
 ↓
-Output Normalizer
-↓
 Pydantic Validation
 ↓
-Validation Repair
+Application Service
 ↓
-Unsupported Claims Validator
-↓
-Deterministic Consistency Processor
-↓
-CLI Output
+CLI / Future FastAPI
 ```
 
 ---
@@ -118,6 +63,8 @@ CLI Output
 * ✅ Sprint 14 — Generic Requirement Processing Pipeline
 * ✅ Sprint 15 — Evidence Intelligence and Requirement Decomposition
 * ✅ Sprint 16 — Claim Safety and Analysis Reliability
+* ✅ Sprint 17 — Application Layer & Delivery Architecture
+
 
 ---
 
@@ -652,9 +599,23 @@ The system should:
 
 ---
 
-# Project Status
-The project has completed the core deterministic backend architecture.
+# Current Project Status
 
-The remaining backend work primarily focuses on application orchestration and delivery rather than core analysis logic.
+Completed:
 
-The next phase transitions the project from a command-line application to a reusable backend service through an Application Service layer, REST API, and frontend integration.
+- Generic candidate profile extraction
+- Generic requirement processing pipeline
+- Requirement assessment engine
+- Evidence collection
+- Application layer
+- Composition root
+- Thin CLI adapter
+- End-to-end deterministic analysis pipeline
+
+Known Issues:
+
+- Requirement filtering still includes non-requirement sections (Benefits, salary, etc.).
+- Degree alternatives are decomposed too aggressively.
+- Semantic matching for equivalent skills requires improvement.
+- Language equivalence matching is limited.
+- Composite requirement parsing (AND/OR) needs refinement.
