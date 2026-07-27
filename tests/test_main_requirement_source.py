@@ -1,10 +1,17 @@
 import unittest
+from contextlib import redirect_stdout
+from io import StringIO
 from unittest.mock import Mock, patch
 
 from pydantic import ValidationError
 
+from app.application import (
+    AnalysisExecutionError,
+    CVProcessingError,
+    InvalidCVSourceError,
+    RequirementProcessingError,
+)
 from app.main import collect_requirement_source, main
-from app.models import RequirementProfile
 from app.requirements.source import RequirementSourceType
 
 
@@ -40,18 +47,12 @@ class MainRequirementSourceTest(unittest.TestCase):
 
     @patch("app.main.print_analysis")
     @patch("app.main.print_candidate_profile")
-    @patch("app.main.parse_cv", return_value={"summary": "Candidate"})
-    @patch("app.main.extract_text", return_value="CV text")
-    @patch("app.main.analyze_cv")
-    @patch("app.main.RequirementPipeline")
+    @patch("app.main.create_application_service")
     @patch("builtins.input")
-    def test_main_passes_source_to_pipeline_and_profile_to_analyzer(
+    def test_main_builds_request_calls_service_once_and_renders_response(
         self,
         mock_input,
-        pipeline_class,
-        analyze_cv,
-        _extract_text,
-        _parse_cv,
+        create_service,
         _print_candidate_profile,
         _print_analysis,
     ) -> None:
@@ -62,22 +63,92 @@ class MainRequirementSourceTest(unittest.TestCase):
             "Financial reporting experience required",
             "END",
         ]
-        profile = RequirementProfile(title="Accountant")
-        pipeline_class.return_value.build.return_value = profile
-        analyze_cv.return_value = Mock(candidate_profile=Mock(), analysis={})
+        candidate_profile = Mock()
+        analysis = Mock()
+        analysis.model_dump.return_value = {"overall_match_score": 80}
+        create_service.return_value.analyze.return_value = Mock(
+            candidate_profile=candidate_profile,
+            analysis=analysis,
+        )
 
         main()
 
-        source = pipeline_class.return_value.build.call_args.args[0]
-        self.assertEqual(source.source_type, RequirementSourceType.PASTED_TEXT)
-        self.assertEqual(source.target_role, "Accountant")
-        analyze_cv.assert_called_once_with(
-            "CV text", profile, {"summary": "Candidate"}
+        create_service.assert_called_once_with()
+        service = create_service.return_value
+        service.analyze.assert_called_once()
+        request = service.analyze.call_args.args[0]
+        self.assertEqual(str(request.cv_source.file_path), "candidate.pdf")
+        self.assertEqual(request.target_role, "Accountant")
+        self.assertEqual(
+            request.requirement_source.source_type,
+            RequirementSourceType.PASTED_TEXT,
         )
-        _print_candidate_profile.assert_called_once_with(
-            analyze_cv.return_value.candidate_profile
+        self.assertEqual(request.requirement_source.target_role, "Accountant")
+        _print_candidate_profile.assert_called_once_with(candidate_profile)
+        _print_analysis.assert_called_once_with(
+            {"overall_match_score": 80}
         )
-        _print_analysis.assert_called_once_with(analyze_cv.return_value.analysis)
+
+    def test_main_maps_expected_application_errors_without_traceback(self) -> None:
+        cases = (
+            (
+                InvalidCVSourceError("bad CV"),
+                "Invalid CV source: bad CV",
+            ),
+            (
+                CVProcessingError("cannot read"),
+                "CV processing error: cannot read",
+            ),
+            (
+                RequirementProcessingError("bad requirements"),
+                "Requirement processing error: bad requirements",
+            ),
+            (
+                AnalysisExecutionError("analysis failed"),
+                "Analysis execution error: analysis failed",
+            ),
+        )
+
+        for error, expected_message in cases:
+            with self.subTest(error=type(error).__name__):
+                answers = iter(
+                    [
+                        "candidate.pdf",
+                        "Accountant",
+                        "1",
+                        "Financial reporting experience required",
+                        "END",
+                    ]
+                )
+                service = Mock()
+                service.analyze.side_effect = error
+                output = StringIO()
+
+                with (
+                    patch("builtins.input", side_effect=answers),
+                    patch(
+                        "app.main.create_application_service",
+                        return_value=service,
+                    ),
+                    redirect_stdout(output),
+                ):
+                    main()
+
+                rendered = output.getvalue()
+                self.assertIn(expected_message, rendered)
+                self.assertNotIn("Traceback", rendered)
+                service.analyze.assert_called_once()
+
+    def test_main_does_not_orchestrate_pipeline_components(self) -> None:
+        import inspect
+        import app.main as main_module
+
+        source = inspect.getsource(main_module.main)
+
+        self.assertNotIn("analyze_cv(", source)
+        self.assertNotIn("RequirementPipeline(", source)
+        self.assertNotIn("extract_text(", source)
+        self.assertNotIn("parse_cv(", source)
 
     def test_main_has_no_static_role_profile_dependency(self) -> None:
         import app.main as main_module

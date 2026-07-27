@@ -1,8 +1,13 @@
-from app.pdf_reader import extract_text
-from app.ai.analyzer import analyze_cv
+from app.application import (
+    AnalysisExecutionError,
+    AnalysisRequest,
+    CVProcessingError,
+    CVSource,
+    InvalidCVSourceError,
+    RequirementProcessingError,
+)
+from app.bootstrap import create_application_service
 from app.candidate_profile.models import CandidateProfile
-from app.cv_parser import parse_cv
-from app.requirements.pipeline import RequirementPipeline
 from app.requirements.source import RequirementSource, RequirementSourceType
 
 
@@ -255,37 +260,30 @@ def main():
 
     try:
         requirement_source = collect_requirement_source(target_role, input)
-    except Exception as error:
+    except (ValueError, TypeError) as error:
         print(f"\nRequirement source error: {error}")
         return
 
-    try:
-        requirement_profile = RequirementPipeline().build(requirement_source)
-    except Exception as error:
-        print(f"\nRequirement extraction error: {error}")
-        return
+    request = AnalysisRequest(
+        cv_source=CVSource(file_path=cv_path),
+        requirement_source=requirement_source,
+        target_role=target_role,
+    )
 
     try:
-        cv_text = extract_text(cv_path)
-        
-        sections = parse_cv(cv_text)
-
-        print("\nDetected CV Sections")
-        print("-" * 27)
-
-        for section, content in sections.items():
-            print(f"\n[{section.upper()}]")
-            print(content[:300])
-
         print("\nAnalyzing CV...\n")
+        response = create_application_service().analyze(request)
 
-        analysis_result = analyze_cv(cv_text, requirement_profile, sections)
-
-        print_candidate_profile(analysis_result.candidate_profile)
-        print_analysis(analysis_result.analysis)
-
-    except Exception as error:
-        print(f"\nAnalyzer error: {error}")
+        print_candidate_profile(response.candidate_profile)
+        print_analysis(response.analysis.model_dump())
+    except InvalidCVSourceError as error:
+        print(f"\nInvalid CV source: {error}")
+    except CVProcessingError as error:
+        print(f"\nCV processing error: {error}")
+    except RequirementProcessingError as error:
+        print(f"\nRequirement processing error: {error}")
+    except AnalysisExecutionError as error:
+        print(f"\nAnalysis execution error: {error}")
 
 
 if __name__ == "__main__":
