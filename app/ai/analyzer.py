@@ -157,6 +157,11 @@ Regenerate the complete response so it conforms to the entire schema, not only
 the fields named in the validation errors.
 
 RequirementAssessment is authoritative.
+A requirement profile entry is one logical requirement.
+Treat alternatives within an entry as alternatives, not separate mandatory gaps.
+Use only the supplied requirement profile and candidate evidence.
+Do not add requirements based on the target-role title or general role knowledge.
+Do not invent candidate evidence or certainty when support is insufficient.
 A requirement marked demonstrated must not appear as missing.
 A requirement marked missing must not be described as supported.
 A preferred or optional requirement must preserve its original priority.

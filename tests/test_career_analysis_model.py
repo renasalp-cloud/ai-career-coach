@@ -2,7 +2,7 @@ import unittest
 
 from pydantic import ValidationError
 
-from app.models import CareerAnalysis
+from app.models import CareerAnalysis, RequirementSkill
 
 
 def _learning_roadmap(weeks: int) -> list[dict]:
@@ -104,3 +104,40 @@ class CareerAnalysisModelTest(unittest.TestCase):
 
         with self.assertRaises(ValidationError):
             CareerAnalysis.model_validate(response)
+
+
+class RequirementSkillModelTest(unittest.TestCase):
+    def test_category_defaults_to_skill_for_backward_compatibility(self) -> None:
+        requirement = RequirementSkill(name="Planning", priority="required")
+
+        self.assertEqual(requirement.category, "skill")
+
+    def test_accepts_every_supported_category(self) -> None:
+        categories = (
+            "skill",
+            "experience",
+            "education",
+            "certification",
+            "language",
+            "tool",
+            "domain_knowledge",
+            "soft_skill",
+            "other",
+        )
+
+        for category in categories:
+            with self.subTest(category=category):
+                requirement = RequirementSkill(
+                    name="Requirement",
+                    priority="required",
+                    category=category,
+                )
+                self.assertEqual(requirement.category, category)
+
+    def test_rejects_unsupported_category(self) -> None:
+        with self.assertRaises(ValidationError):
+            RequirementSkill(
+                name="Requirement",
+                priority="required",
+                category="unsupported",
+            )

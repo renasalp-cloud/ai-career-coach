@@ -317,22 +317,6 @@ if "Accenture" in experience_text:
 - Additional normalization rules will be required over time
 - More components increase architectural complexity
 
----
-
-# Future ADRs
-
-Future architectural decisions will also be documented here.
-
-Potential future ADRs include:
-
-- Candidate Assessment Engine
-- Job Description Parser
-- ATS Compatibility Analysis
-- Multi-LLM Support
-- Report Generation Pipeline
-- Web Application Architecture
-- Retrieval-Augmented Generation (RAG)
-
 # ADR-007 — Candidate Profile Pipeline
 
 Date: 2026-07-10
@@ -943,19 +927,55 @@ Coverage calculations remain unchanged.
 
 ---
 
-# Future ADRs
+# ADR-019 — Allowed Claims
 
-Future architectural decisions may include:
+**Date:** 2026-07-26
 
-* Allowed Claims Builder
-* Application Service Layer
-* REST API
-* Frontend Architecture
-* Multi-LLM Support
-* Retrieval-Augmented Generation (RAG)
-* Report Generation Pipeline
+**Status:** Accepted
 
-# ADR-016 — Deterministic Requirement Assessment Authority
+## Context
+
+Generated analysis needed an explicit boundary preventing candidate facts and evidence from being expanded into unsupported claims.
+
+## Decision
+
+Build AllowedClaims deterministically from CandidateProfile, ranked candidate evidence, validated requirement matches, and RequirementAssessment.
+
+AllowedClaims define the maximum claim boundary supplied to the LLM and final validation.
+
+## Consequences
+
+- Candidate claims remain traceable to structured facts and evidence.
+- Missing requirements cannot be presented as demonstrated.
+- Prompt and validation boundaries remain provider-independent.
+
+---
+
+# ADR-020 — Unsupported Claims Validation
+
+**Date:** 2026-07-26
+
+**Status:** Accepted
+
+## Context
+
+Schema-valid output can still contain claims not supported by CandidateProfile or deterministic evidence.
+
+## Decision
+
+Validate the completed CareerAnalysis against AllowedClaims before presentation.
+
+Unsupported strengths, evidence, summaries, recommendations, and experience claims must be rejected or corrected within deterministic boundaries.
+
+## Consequences
+
+- Structured validation covers factual authority as well as response shape.
+- Unsupported claims do not reach delivery adapters.
+- Claim safety remains independent of the configured LLM provider.
+
+---
+
+# ADR-021 — Deterministic Requirement Assessment Authority
 
 **Date:** 2026-07-26
 
@@ -967,7 +987,14 @@ Earlier analysis results allowed the LLM to reinterpret deterministic requiremen
 
 ## Decision
 
-Requirement Assessment is the authoritative source for requirement status.
+Requirement Assessment is the single authoritative source for:
+
+- demonstrated requirements
+- missing requirements
+- strengths
+- career gaps
+- recommendations
+- roadmap generation
 
 The LLM may explain deterministic assessment results but must not change their classification.
 
@@ -979,8 +1006,12 @@ Evidence used in the final analysis must originate from the deterministic eviden
 - Reduced hallucinated strengths and missing skills.
 - Improved reliability of validation and repair.
 - Clear separation between business logic and LLM-generated explanations.
+- Demonstrated requirements cannot become gaps or produce recommendations.
+- Roadmap items originate only from deterministic gaps.
 
-# ADR-017 — Introduce Application Layer
+---
+
+# ADR-022 — Application Layer and Composition Root
 
 **Date:** 2026-07-27
 
@@ -1011,3 +1042,114 @@ Trade-offs:
 - Dependency construction is centralized instead of being embedded in the CLI.
 
 This decision preserves the provider-agnostic and profession-agnostic architecture established in previous sprints.
+
+---
+
+# ADR-023 — Deterministic Requirement Filtering
+
+**Date:** 2026-07-28
+
+**Status:** Accepted
+
+## Context
+
+Job descriptions contain benefits, compensation, employer branding, application instructions, and other content that must not become candidate requirements.
+
+## Decision
+
+Filter non-requirement content deterministically before RequirementProfile validation and assessment.
+
+Filtering rules remain profession-agnostic and preserve requirement priority.
+
+## Consequences
+
+- Non-requirement content does not create false gaps.
+- Requirement authority remains limited to supplied requirement statements.
+- Filtering behavior is deterministic and testable.
+
+---
+
+# ADR-024 — Logical Requirement Preservation
+
+**Date:** 2026-07-28
+
+**Status:** Accepted
+
+## Context
+
+Aggressive decomposition can change the meaning of alternative education fields and other logical OR requirements.
+
+## Decision
+
+Requirement decomposition must preserve logical alternatives and related-field expressions as one logical requirement. Shared-suffix lists may be reconstructed deterministically when their meaning remains unambiguous.
+
+## Consequences
+
+- Alternatives are not treated as independently mandatory gaps.
+- Requirement meaning and priority survive decomposition.
+- Decomposition remains deterministic and profession-independent.
+
+---
+
+# ADR-025 — Conservative Semantic Matching
+
+**Date:** 2026-07-28
+
+**Status:** Accepted
+
+## Context
+
+End-to-end analysis revealed false gaps caused by wording differences, modifiers, language expressions, related education fields, and compound shared-suffix requirements.
+
+## Decision
+
+Improve semantic matching with conservative deterministic mechanisms:
+
+- modifier removal
+- explicit language matching
+- related-field education matching
+- shared-suffix reconstruction
+
+Business logic does not rely on embeddings, LLM requirement classification, profession-specific rules, or provider-specific implementations.
+
+## Consequences
+
+- Equivalent evidence is less likely to produce a false gap.
+- Ambiguous matches remain missing rather than being inferred optimistically.
+- Matching stays explainable, testable, profession-agnostic, and provider-agnostic.
+
+---
+
+# ADR-026 — Candidate Extraction as the Next Quality Priority
+
+**Date:** 2026-07-28
+
+**Status:** Accepted
+
+## Context
+
+Repository testing with multiple CV formats demonstrated that RequirementAssessment is now reliable. Candidate Profile extraction remains the primary analysis-quality bottleneck across document layouts and wording variations.
+
+## Decision
+
+Sprint 20 prioritizes robust Candidate Profile extraction across diverse layouts, document styles, professions, and wording variations.
+
+This decision sets the quality priority without choosing implementation details.
+
+## Consequences
+
+- Candidate extraction quality is addressed before expanding delivery features.
+- Sprint 20 remains profession-agnostic and provider-agnostic.
+- Implementation details require separate review and approval.
+
+---
+
+# Future ADRs
+
+Future architectural decisions may include:
+
+* REST API
+* Frontend Architecture
+* Multi-LLM Support
+* Retrieval-Augmented Generation (RAG)
+* Report Generation Pipeline

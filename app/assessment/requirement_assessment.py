@@ -5,7 +5,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from app.models import RequirementProfile, SkillMatch
+from app.models import RequirementCategory, RequirementProfile, SkillMatch
 
 
 class RequirementAssessmentError(ValueError):
@@ -28,6 +28,8 @@ EVIDENCE_STRENGTH_THRESHOLDS = (
 
 class AssessedRequirement(BaseModel):
     name: str
+    category: RequirementCategory = "skill"
+    priority: Literal["required", "preferred", "optional"] = "required"
     status: Literal["demonstrated", "missing"]
     evidence_strength: EvidenceStrength
 
@@ -132,6 +134,8 @@ class RequirementAssessmentEngine:
             assessed_requirements.append(
                 AssessedRequirement(
                     name=requirement.name,
+                    category=requirement.category,
+                    priority=requirement.priority,
                     status=match.status,
                     evidence_strength=self._evidence_strength(match),
                 )

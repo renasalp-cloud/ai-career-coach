@@ -28,12 +28,24 @@ Optional Skills:
         self.assertEqual(
             [skill.model_dump() for skill in profile.skills],
             [
-                {"name": "Python", "priority": "required"},
-                {"name": "Machine learning fundamentals", "priority": "required"},
-                {"name": "Docker", "priority": "preferred"},
-                {"name": "Git and GitHub", "priority": "preferred"},
-                {"name": "MLOps", "priority": "optional"},
-                {"name": "Research experience", "priority": "optional"},
+                {"name": "Python", "priority": "required", "category": "skill"},
+                {
+                    "name": "Machine learning fundamentals",
+                    "priority": "required",
+                    "category": "skill",
+                },
+                {"name": "Docker", "priority": "preferred", "category": "skill"},
+                {
+                    "name": "Git and GitHub",
+                    "priority": "preferred",
+                    "category": "skill",
+                },
+                {"name": "MLOps", "priority": "optional", "category": "skill"},
+                {
+                    "name": "Research experience",
+                    "priority": "optional",
+                    "category": "skill",
+                },
             ],
         )
 
@@ -53,7 +65,7 @@ Evaluation Notes:
         self.assertEqual(
             [skill.model_dump() for skill in profile.skills],
             [
-                {"name": "Python", "priority": "required"},
+                {"name": "Python", "priority": "required", "category": "skill"},
             ],
         )
 

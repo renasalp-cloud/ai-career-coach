@@ -6,6 +6,18 @@ from pydantic import BaseModel, Field, model_validator
 
 from app.candidate_profile.models import CandidateProfile
 
+RequirementCategory = Literal[
+    "skill",
+    "experience",
+    "education",
+    "certification",
+    "language",
+    "tool",
+    "domain_knowledge",
+    "soft_skill",
+    "other",
+]
+
 
 class Strength(BaseModel):
     title: str = ""
@@ -55,6 +67,7 @@ class SkillMatch(BaseModel):
 class RequirementSkill(BaseModel):
     name: str
     priority: Literal["required", "preferred", "optional"]
+    category: RequirementCategory = "skill"
 
 
 class RequirementProfile(BaseModel):

@@ -1,6 +1,7 @@
 """Extract generic requirement profiles from requirement source text."""
 
 from app.models import RequirementProfile, RequirementSkill
+from app.requirements.filter import NON_REQUIREMENT_SECTION_HEADINGS
 
 
 SECTION_PRIORITIES = {
@@ -76,6 +77,7 @@ def extract_requirement_profile(
         if (
             heading in RESPONSIBILITY_SECTIONS
             or heading in INTRODUCTORY_SECTIONS
+            or heading in NON_REQUIREMENT_SECTION_HEADINGS
             or stripped_line.endswith(":")
         ):
             current_priority = None

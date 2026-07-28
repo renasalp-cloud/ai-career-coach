@@ -22,7 +22,36 @@ LOW_LEVEL_QUALIFIERS = (
     "foundation",
     "basics",
 )
-GENERIC_SKILL_SUFFIXES = ("skill", "skills")
+GENERIC_SKILL_PREFIXES = (
+    "proficiency in",
+    "knowledge of",
+    "understanding of",
+    "familiarity with",
+    "experience with",
+    "experience using",
+    "strong",
+    "good",
+    "solid",
+    "proficient",
+)
+GENERIC_CAPABILITY_SUFFIXES = ("programming skills", "skill", "skills")
+LANGUAGE_LEVEL = re.compile(r"\b(?:a1|a2|b1|b2|c1|c2)\b")
+LANGUAGE_MODE = re.compile(
+    r"\b(?:listening|writing|written|speaking|spoken|spoken production|"
+    r"spoken interaction|reading)\b"
+)
+EDUCATION_LEVELS = {
+    "bachelor": re.compile(r"\b(?:bachelor(?:'s)?|bsc|ba)\b"),
+    "master": re.compile(r"\b(?:master(?:'s)?|msc|ma)\b"),
+    "doctorate": re.compile(r"\b(?:doctorate|doctoral|phd)\b"),
+}
+EDUCATION_FIELD_STOPWORDS = {
+    "a", "an", "and", "another", "bachelor", "bachelors", "degree", "field",
+    "in", "of", "or", "related", "the",
+}
+RELATED_FIELD_FAMILIES = (
+    frozenset({"computer", "computing", "software", "informatics"}),
+)
 ACTION_EVIDENCE = re.compile(
     r"\b(?:built|developed|implemented|trained|evaluated|deployed|created|"
     r"worked with|gained hands on experience|hands on experience|"
@@ -70,15 +99,87 @@ def _skill_evidence(item: ScoredCandidateEvidence) -> SkillEvidence:
 
 def _comparison_name(value: str) -> str:
     normalized = _normalize(value)
+    for prefix in GENERIC_SKILL_PREFIXES:
+        if normalized.startswith(f"{prefix} "):
+            normalized = normalized[len(prefix) + 1 :].strip()
+            break
     for qualifier in LOW_LEVEL_QUALIFIERS:
         if normalized == qualifier:
             return normalized
         if normalized.endswith(f" {qualifier}"):
             return normalized[: -(len(qualifier) + 1)].strip()
-    for suffix in GENERIC_SKILL_SUFFIXES:
+    for suffix in GENERIC_CAPABILITY_SUFFIXES:
         if normalized.endswith(f" {suffix}"):
             return normalized[: -(len(suffix) + 1)].strip()
     return normalized
+
+
+def _language_match(
+    requirement: str,
+    candidate: CandidateProfile,
+) -> str | None:
+    normalized_requirement = _normalize(requirement)
+    language_entries = [
+        _normalize(language) for language in candidate.languages if language.strip()
+    ]
+
+    for entry in language_entries:
+        language_name = LANGUAGE_MODE.sub(" ", LANGUAGE_LEVEL.sub(" ", entry))
+        language_name = re.sub(r"\s+", " ", language_name).strip()
+        if not language_name or not _contains(normalized_requirement, language_name):
+            continue
+
+        requires_written = bool(re.search(r"\b(?:written|writing)\b", normalized_requirement))
+        requires_spoken = bool(re.search(r"\b(?:spoken|speaking|verbal)\b", normalized_requirement))
+        same_language_entries = [
+            item for item in language_entries
+            if item == entry or LANGUAGE_MODE.search(item)
+        ]
+        has_level = any(LANGUAGE_LEVEL.search(item) for item in same_language_entries)
+        has_written = any(re.search(r"\b(?:written|writing)\b", item) for item in same_language_entries)
+        has_spoken = any(re.search(r"\b(?:spoken|speaking)\b", item) for item in same_language_entries)
+
+        if has_level and (
+            (not requires_written and not requires_spoken)
+            or (LANGUAGE_LEVEL.search(entry))
+            or ((not requires_written or has_written) and (not requires_spoken or has_spoken))
+        ):
+            return language_name
+    return None
+
+
+def _education_level(value: str) -> str | None:
+    normalized = _normalize(value)
+    return next(
+        (level for level, pattern in EDUCATION_LEVELS.items() if pattern.search(normalized)),
+        None,
+    )
+
+
+def _education_match(requirement: str, candidate: CandidateProfile) -> str | None:
+    normalized_requirement = _normalize(requirement)
+    required_level = _education_level(requirement)
+    if not required_level:
+        return None
+
+    requirement_terms = set(normalized_requirement.split()) - EDUCATION_FIELD_STOPWORDS
+    has_related_field = bool(re.search(r"\brelated field\b", normalized_requirement))
+
+    for education in candidate.education:
+        if education.status.casefold() != "completed":
+            continue
+        education_text = education.degree
+        if _education_level(education_text) != required_level:
+            continue
+        education_terms = set(_normalize(education_text).split()) - EDUCATION_FIELD_STOPWORDS
+        if requirement_terms & education_terms:
+            return education.degree
+        if has_related_field and any(
+            requirement_terms & family and education_terms & family
+            for family in RELATED_FIELD_FAMILIES
+        ):
+            return education.degree
+    return None
 
 
 def _contains(text: str, phrase: str) -> bool:
@@ -144,6 +245,49 @@ class SkillMatcher:
         for requirement_skill in requirements.skills:
             role_skill = requirement_skill.name
             normalized_role_skill = _comparison_name(role_skill)
+            is_language_requirement = (
+                requirement_skill.category == "language"
+                or (
+                    re.search(r"\b(?:written|writing)\b", normalized_role_skill)
+                    and re.search(
+                        r"\b(?:spoken|speaking|verbal)\b", normalized_role_skill
+                    )
+                )
+            )
+            if is_language_requirement and (
+                language_name := _language_match(role_skill, candidate)
+            ):
+                relevant_evidence = [
+                    item
+                    for item in evidence
+                    if item.evidence.source_label == "Languages section"
+                    and _contains(item.evidence.source_text, language_name)
+                ]
+                matches.append(
+                    SkillMatch(
+                        role_skill=role_skill,
+                        candidate_skill=language_name,
+                        evidence=self._select_evidence(relevant_evidence),
+                    )
+                )
+                continue
+            if requirement_skill.category == "education" and (
+                education_match := _education_match(role_skill, candidate)
+            ):
+                relevant_evidence = [
+                    item
+                    for item in evidence
+                    if item.evidence.source_type == EvidenceSourceType.EDUCATION
+                    and _contains(item.evidence.source_text, education_match)
+                ]
+                matches.append(
+                    SkillMatch(
+                        role_skill=role_skill,
+                        candidate_skill=education_match,
+                        evidence=self._select_evidence(relevant_evidence),
+                    )
+                )
+                continue
             practical_subject = _practical_subject(role_skill)
             requires_action_evidence = bool(
                 practical_subject

@@ -80,9 +80,12 @@ class AnalysisConsistencyProcessorTest(unittest.TestCase):
                 SkillMatch(role_skill="Docker", status="missing"),
             ],
         )
-        self.assertEqual(result.career_gap_analysis, "Validated missing requirements: Docker.")
+        self.assertEqual(
+            result.career_gap_analysis,
+            "Primary remaining gaps are: Preferred: Docker.",
+        )
 
-    def test_valid_gap_is_preserved(self) -> None:
+    def test_gap_is_rebuilt_from_only_deterministic_missing_requirements(self) -> None:
         gap = "Docker is missing, while Machine Learning is demonstrated."
         result = self.processor.process(
             _analysis(gap=gap), CandidateProfile(), _requirements(),
@@ -91,7 +94,103 @@ class AnalysisConsistencyProcessorTest(unittest.TestCase):
                 SkillMatch(role_skill="Docker", status="missing"),
             ],
         )
-        self.assertEqual(result.career_gap_analysis, gap)
+        self.assertEqual(
+            result.career_gap_analysis,
+            "Primary remaining gaps are: Preferred: Docker.",
+        )
+        self.assertNotIn("Machine Learning", result.career_gap_analysis)
+
+    def test_missing_requirement_is_removed_from_strengths_even_if_profile_lists_it(self) -> None:
+        analysis = _analysis()
+        analysis.strengths = [
+            Strength(title="Docker", evidence="Docker is listed in the candidate profile.")
+        ]
+
+        result = self.processor.process(
+            analysis,
+            CandidateProfile(skills=[SkillEntry(name="Docker")]),
+            _requirements(),
+            [SkillMatch(role_skill="Docker", status="missing")],
+        )
+
+        self.assertEqual(result.strengths, [])
+
+    def test_professional_summary_cannot_claim_a_missing_requirement(self) -> None:
+        result = self.processor.process(
+            _analysis(summary="Candidate demonstrates Docker and Git."),
+            CandidateProfile(skills=[SkillEntry(name="Git")]),
+            RequirementProfile(skills=[
+                RequirementSkill(name="Docker", priority="required"),
+                RequirementSkill(name="Git", priority="required"),
+            ]),
+            [
+                SkillMatch(role_skill="Docker", status="missing"),
+                SkillMatch(role_skill="Git", candidate_skill="Git", status="demonstrated"),
+            ],
+        )
+
+        self.assertNotIn("Docker", result.professional_summary)
+        self.assertIn("Git", result.professional_summary)
+
+    def test_mixed_assessment_aligns_every_narrative_section(self) -> None:
+        requirements = RequirementProfile(skills=[
+            RequirementSkill(name="Git", priority="required"),
+            RequirementSkill(name="Docker", priority="required"),
+            RequirementSkill(name="Python", priority="preferred"),
+            RequirementSkill(name="REST API", priority="optional"),
+        ])
+        matches = [
+            SkillMatch(role_skill="Git", candidate_skill="Git", status="demonstrated"),
+            SkillMatch(role_skill="Docker", status="missing"),
+            SkillMatch(role_skill="Python", candidate_skill="Python", status="demonstrated"),
+            SkillMatch(role_skill="REST API", status="missing"),
+        ]
+        analysis = _analysis(
+            summary="Candidate demonstrates Git, Python, Docker, and REST API.",
+            gap="Git and Python are missing.",
+        )
+        analysis.strengths = [
+            Strength(title="Git", evidence="Git"),
+            Strength(title="Docker", evidence="Docker"),
+        ]
+        analysis.recommendations = [
+            Recommendation(
+                priority="high",
+                title="Learn Git",
+                reason="Git is needed.",
+                action="Practice Git.",
+            )
+        ]
+
+        result = self.processor.process(
+            analysis,
+            CandidateProfile(skills=[SkillEntry(name="Git"), SkillEntry(name="Python")]),
+            requirements,
+            matches,
+        )
+
+        self.assertEqual([item.title for item in result.strengths], ["Git"])
+        self.assertNotIn("Git", result.career_gap_analysis)
+        self.assertNotIn("Python", result.career_gap_analysis)
+        self.assertIn("Docker", result.career_gap_analysis)
+        self.assertIn("REST API", result.career_gap_analysis)
+        narrative = " ".join(
+            [
+                *(
+                    f"{item.title} {item.reason} {item.action}"
+                    for item in result.recommendations
+                ),
+                *(
+                    f"{week.goal} {' '.join(week.topics)} "
+                    f"{week.practical_task} {week.expected_outcome}"
+                    for week in result.learning_roadmap
+                ),
+            ]
+        )
+        self.assertNotIn("Git", narrative)
+        self.assertNotIn("Python", narrative)
+        self.assertIn("Docker", narrative)
+        self.assertIn("REST API", narrative)
 
     def test_unsupported_professional_title_is_replaced(self) -> None:
         result = self.processor.process(

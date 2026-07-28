@@ -48,6 +48,16 @@ class RequirementProfileValidatorTest(unittest.TestCase):
         ):
             self.validator.validate(profile)
 
+    def test_rejects_invalid_category(self) -> None:
+        invalid_skill = RequirementSkill.model_construct(
+            name="Skill", priority="required", category="unsupported"
+        )
+
+        with self.assertRaisesRegex(
+            RequirementProfileValidationError, "Unsupported.*category"
+        ):
+            self.validator.validate(self._profile(invalid_skill))
+
     def _assert_invalid_name(self, name: str) -> None:
         profile = self._profile(
             RequirementSkill(name=name, priority="required")

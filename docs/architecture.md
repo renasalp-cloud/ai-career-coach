@@ -4,7 +4,7 @@
 
 AI Career Coach is a profession-agnostic career assessment platform.
 
-The system evaluates how well a candidate matches a target role using deterministic processing before AI reasoning.
+The system evaluates how well a candidate matches supplied requirements using deterministic processing before AI reasoning.
 
 The LLM is a presentation and explanation component—not the decision maker.
 
@@ -16,14 +16,14 @@ Given:
 
 - A candidate CV
 - A target role
-- A requirement source (job description or requirement document)
+- A requirement source such as a job description
 
-The system produces:
+The system produces a structured CareerAnalysis containing:
 
 - Overall match score
 - Professional summary
 - Strengths
-- Missing skills
+- Missing requirements grouped by priority
 - Career gap analysis
 - Recommendations
 - Learning roadmap
@@ -33,53 +33,57 @@ The system produces:
 # High-Level Architecture
 
 ```text
-                 Candidate CV                     Requirement Source
-                      │                                   │
-                      ▼                                   ▼
-                 PDF Reader                    Requirement Source
-                      │                                   │
-                      ▼                                   ▼
-                Text Cleaner                  Requirement Loader
-                      │                                   │
-                      ▼                                   ▼
-                  CV Parser               Requirement Extractor
-                      │                                   │
-                      ▼                                   ▼
-        Candidate Profile Extractor     Requirement Normalizer
-                      │                                   │
-                      ▼                                   ▼
-     Candidate Profile Normalizer    Requirement Validator
-                      │                                   │
-                      └──────────────┬────────────────────┘
-                                     ▼
-                           Evidence Collector
-                                     │
-                                     ▼
-                              Skill Matcher
-                                     │
-                                     ▼
-                              Skill Validator
-                                     │
-                                     ▼
-                    Requirement Assessment Engine
-                                     │
-                                     ▼
-                              Prompt Builder
-                                     │
-                                     ▼
-                                   LLM
-                                     │
-                                     ▼
-                          Output Normalizer
-                                     │
-                                     ▼
-                          Pydantic Validation
-                                     │
-                                     ▼
-                  Deterministic Consistency Processor
-                                     │
-                                     ▼
-                              CLI / Web / API
+Candidate CV                              Requirement Source
+     ↓                                            ↓
+PDF Reader                              Requirement Loader
+     ↓                                            ↓
+Text Cleaner                           Requirement Extractor
+     ↓                                            ↓
+CV Parser                              Requirement Filter
+     ↓                                            ↓
+Candidate Profile Extractor            Requirement Decomposer
+     ↓                                            ↓
+Candidate Profile Normalizer           Requirement Normalizer
+     ↓                                            ↓
+CandidateProfile                       Category Classifier
+     │                                            ↓
+     │                                  Requirement Validator
+     │                                            ↓
+     └──────────────────────────┬────────RequirementProfile
+                                ↓
+                       Evidence Collector
+                                ↓
+                    Evidence Quality Scorer
+                                ↓
+                         Evidence Ranker
+                                ↓
+                          Skill Matcher
+                                ↓
+                         Skill Validator
+                                ↓
+                 Requirement Assessment Engine
+                                ↓
+                      Allowed Claims Builder
+                                ↓
+                          Prompt Builder
+                                ↓
+                           LLM Provider
+                                ↓
+                       Output Normalizer
+                                ↓
+                      Pydantic Validation
+                                ↓
+                       Validation Repair
+                                ↓
+              Deterministic Consistency Processor
+                                ↓
+                Unsupported Claims Validator
+                                ↓
+                         CareerAnalysis
+                                ↓
+                      Application Service
+                                ↓
+                      CLI / Future API
 ```
 
 ---
@@ -88,7 +92,7 @@ The system produces:
 
 ## Candidate Pipeline
 
-Responsible for converting an unstructured CV into a normalized CandidateProfile.
+Converts extracted CV text into a normalized CandidateProfile.
 
 Components:
 
@@ -98,120 +102,85 @@ Components:
 - Candidate Profile Extractor
 - Candidate Profile Normalizer
 
-Output:
-
-CandidateProfile
+CandidateProfile is authoritative for candidate facts.
 
 ---
 
 ## Requirement Pipeline
 
-Responsible for converting requirement text into a validated RequirementProfile.
+Converts user-supplied requirement text into a validated RequirementProfile.
 
 Components:
 
-- Requirement Source
-- Requirement Loader
+- Requirement Source and Loader
 - Requirement Extractor
+- Deterministic Requirement Filter
+- Requirement Decomposer
 - Requirement Normalizer
+- Requirement Category Classifier
 - Requirement Validator
 
-Output:
+Filtering excludes non-requirement content. Decomposition preserves logical alternatives and reconstructs shared-suffix expressions. Category classification preserves semantic types such as skill, experience, education, certification, language, tool, domain knowledge, and soft skill.
 
-RequirementProfile
-
-The pipeline is source-agnostic.
-
-Requirement sources may include:
-
-- pasted job descriptions
-- text files
-- future external integrations
+The pipeline is source-agnostic and does not generate requirements from the target-role title.
 
 ---
 
-## Evidence Collector
+## Evidence Pipeline
 
-Collects supporting evidence for candidate skills from the CandidateProfile.
+Collects structured candidate evidence, assigns deterministic quality scores, and ranks evidence before matching.
 
-Evidence is later used during semantic matching and explanation generation.
-
----
-
-## Skill Matcher
-
-Matches candidate skills against requirement skills.
-
-Responsibilities:
-
-- exact matching
-- alias matching
-- deterministic matching
-
-Business rules remain deterministic.
+Evidence retains its source, supporting text, and related skill. Evidence scoring and ranking do not determine requirement status.
 
 ---
 
-## Skill Validator
+## Deterministic Matching
 
-Validates every match.
+The Skill Matcher and Skill Validator compare CandidateProfile evidence with RequirementProfile entries.
 
-Produces deterministic demonstrated/missing status.
+Supported deterministic mechanisms include:
+
+- Exact and alias matching
+- Conservative modifier-aware matching
+- Explicit language matching
+- Related-field education matching
+- Practical and action evidence matching
+
+Matching does not use embeddings, LLM classification, profession-specific rules, or provider-specific implementations.
 
 ---
 
 ## Requirement Assessment Engine
 
-Produces deterministic assessment results.
+Produces authoritative deterministic assessment results, including:
 
-Responsibilities include:
+- Overall, required, preferred, and optional coverage
+- Demonstrated requirements
+- Missing requirements grouped by priority
+- Requirement categories
+- Evidence-strength classification
 
-- requirement coverage
-- required coverage
-- preferred coverage
-- optional coverage
-- demonstrated skills
-- missing requirement groups
-
-No coverage calculations are performed by the LLM.
+The assessment is the source of truth for strengths, career gaps, recommendations, and roadmap generation. Demonstrated requirements cannot become gaps or development actions.
 
 ---
 
-## Prompt Builder
+## Allowed Claims
 
-Formats structured deterministic context for the language model.
+The Allowed Claims Builder derives the maximum supported claim boundary from CandidateProfile, ranked evidence, validated matches, and RequirementAssessment.
 
-Responsibilities:
-
-- serialize structured objects
-- assemble prompt context
-
-It does not perform business logic.
+The Unsupported Claims Validator rejects final analysis claims outside that boundary.
 
 ---
 
-## AI Provider
+## Prompt Builder and AI Provider
 
-Responsible only for explanation and presentation.
+The Prompt Builder serializes structured deterministic context and assembles the prompt. It does not own business rules.
 
-Current provider:
-
-- Ollama (Qwen2.5)
-
-Future providers:
-
-- OpenAI
-- Claude
-- Gemini
-- Local models
-
-Changing providers must not affect business logic.
+The AI provider explains the supplied facts and assessment. Provider changes must not affect business logic.
 
 ---
 
 ## Output Pipeline
-
-Responsible for validating AI output before presentation.
 
 Components:
 
@@ -219,8 +188,17 @@ Components:
 - Pydantic Validation
 - Validation Repair
 - Deterministic Consistency Processor
+- Unsupported Claims Validator
 
-Invalid AI output must never reach the user.
+The consistency processor aligns the score and narrative sections with deterministic requirement status. Invalid or unsupported output does not reach the delivery layer.
+
+---
+
+## Application Layer
+
+The Application Service owns application orchestration. Dependency construction is centralized in `app/bootstrap.py`.
+
+The CLI and future delivery adapters depend on the Application Service rather than owning business orchestration.
 
 ---
 
@@ -228,45 +206,27 @@ Invalid AI output must never reach the user.
 
 ## Deterministic Before AI
 
-Business logic executes before AI reasoning.
+Business logic executes before AI reasoning. The LLM explains deterministic conclusions.
 
-The LLM explains deterministic conclusions.
+## Structured Authority
 
----
-
-## Single Responsibility
-
-Each component owns exactly one responsibility.
-
----
-
-## Structured Data First
-
-Structured objects are preferred over raw text.
-
----
+CandidateProfile owns candidate facts, RequirementProfile owns supplied requirements, and RequirementAssessment owns requirement status and deterministic narrative conclusions.
 
 ## Profession Agnostic
 
-No profession-specific rules exist in deterministic components.
-
----
+Deterministic components contain no profession-specific rules.
 
 ## Provider Agnostic
 
-Changing LLM providers must not require business logic changes.
-
----
+Changing AI providers does not require business logic changes.
 
 ## Explainable Decisions
 
-Every conclusion should be traceable to candidate evidence and requirement data.
-
----
+Conclusions are traceable to candidate evidence and supplied requirement data.
 
 ## Validation First
 
-Every AI response is normalized and validated before presentation.
+AI output is normalized, validated, made consistent, and checked for unsupported claims before presentation.
 
 ---
 
@@ -274,44 +234,27 @@ Every AI response is normalized and validated before presentation.
 
 Implemented:
 
-- Candidate Pipeline
-- Requirement Pipeline
-- Evidence Collection
-- Deterministic Skill Matching
-- Skill Validation
-- Requirement Assessment Engine
-- Prompt Builder
-- Output Normalization
-- Pydantic Validation
-- Validation Repair
-- Deterministic Consistency Processing
-- CLI Interface
-- 135 Automated Tests
+- Candidate Profile pipeline
+- Generic Requirement pipeline
+- Requirement filtering, decomposition, normalization, category preservation, and validation
+- Structured evidence collection, scoring, and ranking
+- Conservative deterministic semantic matching
+- Requirement Assessment authority
+- Allowed Claims and unsupported-claims validation
+- Prompt construction and provider integration
+- Structured output normalization, validation, repair, and consistency processing
+- Application Service and composition root
+- CLI interface
+- 303 automated tests
 
 ---
 
-# Future Architecture
+# Current Limitation
 
-Planned improvements:
-
-- Requirement Decomposition Engine
-- Evidence Intelligence Pipeline
-- Evidence Quality Scoring
-- Experience Weighting
-- Hallucination Guard
-- ATS Optimization
-- Resume Optimization
-- Cover Letter Generation
-- Interview Preparation
-- REST API
-- Web Application
-- User Accounts
-- Report History
+Candidate Profile extraction is the next quality bottleneck and is not yet robust across diverse CV layouts and document styles.
 
 ---
 
 # Guiding Principle
 
-Every architectural change must reduce LLM responsibility and increase deterministic reasoning.
-
-The LLM should explain decisions—not make them.
+Every architectural change must reduce unsupported LLM authority and increase deterministic, explainable reasoning.

@@ -70,22 +70,28 @@ class AnalysisConsistencyProcessor:
         self._apply_missing_groups(analysis, missing_groups)
 
         demonstrated = self._demonstrated_names(validated_skill_matches)
+        missing = {
+            _normalize(skill)
+            for skills in missing_groups.values()
+            for skill in skills
+        }
         self._remove_demonstrated_skills(analysis, demonstrated)
-        self._validate_strengths(analysis, candidate_profile, validated_skill_matches)
+        self._validate_strengths(
+            analysis,
+            candidate_profile,
+            validated_skill_matches,
+            missing,
+        )
         self._align_recommendations(analysis, missing_groups, demonstrated)
         self._align_roadmap(analysis, missing_groups, demonstrated)
-
-        if self._gap_contradicts_demonstrated_skill(
-            analysis.career_gap_analysis, demonstrated
-        ):
-            analysis.career_gap_analysis = self._build_gap_summary(
-                validated_skill_matches
-            )
+        analysis.career_gap_analysis = self._build_gap_summary(missing_groups)
 
         if self._introduces_unsupported_title(
             analysis.professional_summary, candidate_profile
         ) or self._gap_contradicts_demonstrated_skill(
             analysis.professional_summary, demonstrated
+        ) or self._summary_claims_missing_skill(
+            analysis.professional_summary, missing
         ):
             analysis.professional_summary = self._build_candidate_summary(
                 candidate_profile, validated_skill_matches
@@ -99,13 +105,20 @@ class AnalysisConsistencyProcessor:
         analysis: CareerAnalysis,
         profile: CandidateProfile,
         matches: list[SkillMatch],
+        missing: set[str],
     ) -> None:
         facts = cls._candidate_facts(profile, matches)
         analysis.strengths = [
             strength
             for strength in analysis.strengths
-            if cls._text_supported(strength.title, facts)
-            or cls._text_supported(strength.evidence, facts)
+            if not cls._mentions_any(
+                (strength.title, strength.evidence),
+                missing,
+            )
+            and (
+                cls._text_supported(strength.title, facts)
+                or cls._text_supported(strength.evidence, facts)
+            )
         ]
         analysis.strengths = [
             cls._ground_strength_language(strength, profile, matches, facts)
@@ -435,13 +448,28 @@ class AnalysisConsistencyProcessor:
         return False
 
     @staticmethod
-    def _build_gap_summary(matches: list[SkillMatch]) -> str:
-        missing = list(
-            dict.fromkeys(match.role_skill for match in matches if match.status == "missing")
-        )
-        if not missing:
-            return "No validated skill gaps were identified."
-        return f"Validated missing requirements: {', '.join(missing)}."
+    def _build_gap_summary(groups: dict[str, list[str]]) -> str:
+        sections = [
+            f"{label}: {', '.join(groups[group])}"
+            for group, label in (
+                ("critical", "Required"),
+                ("important", "Preferred"),
+                ("optional", "Optional"),
+            )
+            if groups[group]
+        ]
+        if not sections:
+            return "No validated requirement gaps were identified."
+        return "Primary remaining gaps are: " + "; ".join(sections) + "."
+
+    @staticmethod
+    def _summary_claims_missing_skill(text: str, missing: set[str]) -> bool:
+        for sentence in re.split(r"(?<=[.!?;])\s+", text):
+            if not MISSING_LANGUAGE.search(sentence) and any(
+                _contains_phrase(sentence, skill) for skill in missing
+            ):
+                return True
+        return False
 
     @staticmethod
     def _introduces_unsupported_title(

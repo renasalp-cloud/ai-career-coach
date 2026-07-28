@@ -125,7 +125,7 @@ class AnalyzerAllowedClaimsTest(unittest.TestCase):
         self.assertIn("coordinated weekly workshops", final_summary.casefold())
         self.assertEqual(
             result.analysis["career_gap_analysis"],
-            "Planning is not demonstrated.",
+            "Primary remaining gaps are: Required: Planning.",
         )
 
     def test_repaired_analysis_is_validated_without_an_extra_llm_call(self) -> None:

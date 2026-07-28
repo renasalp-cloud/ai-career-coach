@@ -18,7 +18,7 @@ _WORD_RE = re.compile(r"[^\W_]+(?:['’-][^\W_]+)*", re.UNICODE)
 _SENTENCE_RE = re.compile(r".+?(?:[.!?](?=\s|$)|$)", re.DOTALL)
 _GAP_RE = re.compile(
     r"\b(?:no|not|missing|unmet|lacks?|lack\s+of|not\s+evidenced|"
-    r"not\s+demonstrated|insufficient\s+evidence|gap)\b",
+    r"not\s+demonstrated|insufficient\s+evidence|gaps?)\b",
     re.IGNORECASE,
 )
 _PROSPECTIVE_RE = re.compile(

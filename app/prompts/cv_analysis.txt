@@ -87,6 +87,20 @@ Use the candidate profile as the authority for candidate history.
 
 Use the requirement profile as the authority for role expectations.
 
+Use only the supplied requirement profile. Do not add requirements based on
+the target-role title or general knowledge about the role.
+
+Treat each requirement-profile entry as one authoritative logical requirement.
+When an entry contains alternatives, treat them as alternatives: do not split
+them into separate gaps and do not require the candidate to satisfy every
+alternative.
+
+Do not turn a related, equivalent, or another-option modifier into an
+independent requirement.
+
+Use only supplied candidate evidence. When deterministic information is
+insufficient, explain the uncertainty without inventing evidence or certainty.
+
 When sources conflict, apply this priority:
 
 1. Requirement Assessment

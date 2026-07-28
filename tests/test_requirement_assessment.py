@@ -6,7 +6,10 @@ from app.assessment.requirement_assessment import (
     RequirementAssessmentEngine,
     RequirementAssessmentError,
 )
+from app.candidate_profile.models import EducationEntry, SkillEntry
 from app.models import CandidateProfile, RequirementProfile, RequirementSkill, SkillEvidence, SkillMatch
+from app.semantic.matcher import SkillMatcher
+from app.semantic.validator import SkillValidator
 
 
 def _profile(*skills: tuple[str, str]) -> RequirementProfile:
@@ -59,6 +62,28 @@ class RequirementAssessmentEngineTest(unittest.TestCase):
         self.assertEqual(assessment.preferred_coverage_percentage, 100)
         self.assertEqual((assessment.optional_total, assessment.optional_demonstrated), (1, 0))
         self.assertEqual(assessment.optional_coverage_percentage, 0)
+
+    def test_preserves_requirement_category_and_priority(self) -> None:
+        profile = RequirementProfile(
+            skills=[
+                RequirementSkill(
+                    name="Bachelor's degree",
+                    priority="preferred",
+                    category="education",
+                )
+            ]
+        )
+
+        assessment = self.engine.assess(
+            profile,
+            [_match("Bachelor's degree", "missing")],
+        )
+
+        assessed = assessment.assessed_requirements[0]
+        self.assertEqual(assessed.category, "education")
+        self.assertEqual(assessed.priority, "preferred")
+        self.assertEqual(assessed.status, "missing")
+        self.assertEqual(assessed.evidence_strength, EvidenceStrength.NONE)
 
     def test_zero_totals_return_zero_percentages(self) -> None:
         assessment = self.engine.assess(RequirementProfile(), [])
@@ -238,6 +263,57 @@ class RequirementAssessmentEngineTest(unittest.TestCase):
 
         self.assertIn('"assessed_requirements"', prompt)
         self.assertIn('"evidence_strength": "strong"', prompt)
+
+    def test_false_gap_reductions_flow_through_assessment_without_changing_coverage(self) -> None:
+        profile = RequirementProfile(
+            skills=[
+                RequirementSkill(
+                    name="Bachelor's degree in Computer Science, Software Engineering, or a related field",
+                    priority="required",
+                    category="education",
+                ),
+                RequirementSkill(
+                    name="Strong Python programming skills", priority="required"
+                ),
+                RequirementSkill(
+                    name="Good written and spoken English",
+                    priority="required",
+                    category="language",
+                ),
+                RequirementSkill(name="REST API development", priority="required"),
+                RequirementSkill(name="Docker", priority="preferred"),
+                RequirementSkill(name="Kubernetes", priority="optional"),
+            ]
+        )
+        candidate = CandidateProfile(
+            education=[
+                EducationEntry(
+                    degree="Bachelor of Computer Systems", status="completed"
+                )
+            ],
+            skills=[SkillEntry(name="Python")],
+            languages=["English B2"],
+        )
+
+        matches = SkillValidator().validate(SkillMatcher().match(candidate, profile))
+        assessment = self.engine.assess(profile, matches)
+
+        self.assertEqual(assessment.demonstrated_requirements, 3)
+        self.assertEqual(assessment.missing_requirements, 3)
+        self.assertEqual(assessment.overall_coverage_percentage, 50)
+        self.assertEqual(
+            assessment.demonstrated_skills,
+            [
+                "Bachelor's degree in Computer Science, Software Engineering, or a related field",
+                "Strong Python programming skills",
+                "Good written and spoken English",
+            ],
+        )
+        self.assertEqual(
+            assessment.critical_missing_skills, ["REST API development"]
+        )
+        self.assertEqual(assessment.preferred_missing_skills, ["Docker"])
+        self.assertEqual(assessment.optional_missing_skills, ["Kubernetes"])
 
 
 if __name__ == "__main__":

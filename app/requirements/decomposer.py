@@ -12,6 +12,7 @@ _WRAPPER_PATTERN = re.compile(
 )
 _EXPLICIT_SEPARATOR_PATTERN = re.compile(r"\s*(?:[,;]|\s+/\s+)\s*")
 _CONJUNCTION_PATTERN = re.compile(r"\s+(?:and|or)\s+", re.IGNORECASE)
+_ALTERNATIVE_PATTERN = re.compile(r"\bor\b", re.IGNORECASE)
 _PROTECTED_PHRASES = {
     "research and development",
     "health and safety",
@@ -46,7 +47,11 @@ class RequirementDecomposer:
 
                 seen_names.add(comparison_key)
                 decomposed_skills.append(
-                    RequirementSkill(name=name, priority=skill.priority)
+                    RequirementSkill(
+                        name=name,
+                        priority=skill.priority,
+                        category=skill.category,
+                    )
                 )
 
         return profile.model_copy(deep=True, update={"skills": decomposed_skills})
@@ -56,6 +61,12 @@ class RequirementDecomposer:
         stripped_name = name.strip()
         if not stripped_name:
             return []
+
+        # An explicit "or" makes the complete expression one logical
+        # requirement. Splitting any comma-delimited alternatives would turn
+        # each option into an independent mandatory requirement.
+        if _ALTERNATIVE_PATTERN.search(stripped_name):
+            return [stripped_name.strip(" .")]
 
         wrapper_match = _WRAPPER_PATTERN.match(stripped_name)
         content = _WRAPPER_PATTERN.sub("", stripped_name, count=1).strip()
@@ -71,6 +82,7 @@ class RequirementDecomposer:
             for part in RequirementDecomposer._split_safe_conjunction(
                 fragment,
                 allow_split=has_explicit_separator or not is_ability_phrase,
+                preserve_uncertain=not has_explicit_separator,
             )
         ]
 
@@ -81,7 +93,9 @@ class RequirementDecomposer:
         ]
 
     @staticmethod
-    def _split_safe_conjunction(fragment: str, *, allow_split: bool) -> list[str]:
+    def _split_safe_conjunction(
+        fragment: str, *, allow_split: bool, preserve_uncertain: bool
+    ) -> list[str]:
         fragment = re.sub(
             r"^(?:and|or)\s+", "", fragment.strip(), flags=re.IGNORECASE
         )
@@ -91,6 +105,22 @@ class RequirementDecomposer:
         parts = _CONJUNCTION_PATTERN.split(fragment)
         if not allow_split or len(parts) != 2:
             return [fragment]
+
+        first_part = parts[0].split()
+        second_part = parts[1].split()
+        if len(first_part) == 1 and len(second_part) == 2:
+            shared_noun = second_part[-1]
+            first_modifier = first_part[0].casefold()
+            second_modifier = second_part[0].casefold()
+            if (
+                first_modifier not in _LEADING_QUALITY_MODIFIERS
+                and shared_noun.casefold() not in {"skills", "skill", "experience"}
+                and first_modifier.endswith("ed")
+                and second_modifier.endswith("ed")
+            ):
+                return [f"{parts[0]} {shared_noun}", parts[1]]
+            if preserve_uncertain and not first_modifier.endswith("ing"):
+                return [fragment]
 
         # Short concepts can stand independently without borrowing context from
         # the other side. Parallel -ing forms and longer phrases are ambiguous

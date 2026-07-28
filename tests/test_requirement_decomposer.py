@@ -14,9 +14,12 @@ class RequirementDecomposerTest(unittest.TestCase):
         )
         self.assertEqual([skill.name for skill in result.skills], ["Python", "Docker", "Cloud deployment"])
 
-    def test_decomposes_conjunction_list_with_wrapper(self) -> None:
+    def test_preserves_explicit_alternative_with_wrapper(self) -> None:
         result = self.decomposer.decompose(self._profile("Knowledge of planning or risk management"))
-        self.assertEqual([skill.name for skill in result.skills], ["Planning", "Risk management"])
+        self.assertEqual(
+            [skill.name for skill in result.skills],
+            ["Knowledge of planning or risk management"],
+        )
 
     def test_decomposes_semicolon_and_spaced_slash_lists(self) -> None:
         result = self.decomposer.decompose(self._profile("Planning; communication / risk management"))
@@ -114,13 +117,40 @@ class RequirementDecomposerTest(unittest.TestCase):
             ["Planning", "Communication", "Risk management"],
         )
 
-    def test_simple_two_item_noun_concept_list_decomposes(self) -> None:
+    def test_simple_two_item_alternative_remains_one_requirement(self) -> None:
         result = self.decomposer.decompose(
             self._profile("Knowledge of planning or risk management")
         )
         self.assertEqual(
             [skill.name for skill in result.skills],
-            ["Planning", "Risk management"],
+            ["Knowledge of planning or risk management"],
+        )
+
+    def test_preserves_cross_domain_alternative_requirements(self) -> None:
+        requirements = (
+            "Degree in Accounting, Finance, Economics, or a related field",
+            "Degree in Nursing or another recognized healthcare discipline",
+            "Bachelor's degree in physics, statistics, or a related field",
+            "Experience with AWS, Azure, or another cloud platform",
+            "Professional proficiency in English or German",
+            "Professional certification or equivalent experience",
+        )
+
+        for requirement in requirements:
+            with self.subTest(requirement=requirement):
+                result = self.decomposer.decompose(self._profile(requirement))
+                self.assertEqual(
+                    [skill.name for skill in result.skills],
+                    [requirement],
+                )
+
+    def test_cumulative_and_list_still_decomposes(self) -> None:
+        result = self.decomposer.decompose(
+            self._profile("Experience with Python, Docker, and Kubernetes")
+        )
+        self.assertEqual(
+            [skill.name for skill in result.skills],
+            ["Python", "Docker", "Kubernetes"],
         )
 
     def test_simple_atomic_requirement_remains_unchanged(self) -> None:
@@ -135,6 +165,25 @@ class RequirementDecomposerTest(unittest.TestCase):
         names = [skill.name for skill in result.skills]
         self.assertEqual(names, ["Excellent written and verbal communication"])
         self.assertNotIn("Excellent written", names)
+
+    def test_reconstructs_shared_noun_conjunction(self) -> None:
+        result = self.decomposer.decompose(
+            self._profile("Understanding of supervised and unsupervised learning")
+        )
+
+        names = [skill.name for skill in result.skills]
+        self.assertEqual(names, ["Supervised learning", "Unsupervised learning"])
+        self.assertNotIn("Supervised", names)
+
+    def test_does_not_reconstruct_uncertain_conjunction(self) -> None:
+        result = self.decomposer.decompose(
+            self._profile("Understanding of strategy and risk management")
+        )
+
+        self.assertEqual(
+            [skill.name for skill in result.skills],
+            ["Strategy and risk management"],
+        )
 
     @staticmethod
     def _profile(name: str) -> RequirementProfile:

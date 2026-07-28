@@ -1,86 +1,54 @@
 # AI Career Coach
 
-An AI powered career assistant that analyzes CVs, identifies skill gaps, and generates personalized career recommendations using a local LLM.
+A profession-agnostic career assessment application that compares a candidate CV with user-supplied job requirements.
 
 ## About
 
-AI Career Coach is an AI-powered application that analyzes CVs and provides personalized career guidance based on a user's target role.
+AI Career Coach extracts a structured CandidateProfile from a PDF CV and a validated RequirementProfile from a supplied job description. Deterministic components collect evidence, match and assess requirements, and keep the final analysis consistent. A local LLM explains those results in a structured CareerAnalysis response.
 
-The application extracts text from a PDF CV, organizes it into structured sections, and uses a local Large Language Model (LLM) through Ollama to generate an objective career analysis. The response is validated using structured data models before being presented to the user.
+Current capabilities include:
 
-Current features include:
-
-- PDF CV parsing
-- Structured CV section extraction
-- AI-powered CV analysis
-- Target role matching
-- Skill gap identification
-- Personalized recommendations
-- 4-week learning roadmap
-- Local AI inference with Ollama
-- Structured JSON validation
+- PDF text extraction and CV section parsing
+- Generic Candidate Profile extraction and normalization
+- Requirement extraction, filtering, decomposition, normalization, categorization, and validation
+- Structured evidence collection, scoring, and ranking
+- Conservative deterministic requirement matching
+- Deterministic requirement assessment and narrative consistency
+- Allowed-claims and unsupported-claims validation
+- Structured JSON normalization and Pydantic validation
+- Application Service orchestration and CLI delivery
 
 ## Current Architecture
 
 ```text
-PDF CV
-   │
-   ▼
-PDF Reader
-   │
-   ▼
-Text Cleaning
-   │
-   ▼
-CV Parser
-   │
-   ▼
-Structured CV
-   │
-   ▼
-Ollama (Local LLM)
-   │
-   ▼
-Structured JSON
-   │
-   ▼
-Pydantic Validation
-   │
-   ▼
-CLI Output
+Candidate CV → CandidateProfile
+                         ┐
+                         ├→ Evidence and deterministic requirement assessment
+                         │  → Prompt construction → LLM explanation
+Requirement Source       │  → Structured validation
+  → RequirementProfile ──┘  → Deterministic consistency and claim validation
+                            → CareerAnalysis
 ```
+
+See [docs/architecture.md](docs/architecture.md) for the component-level architecture.
 
 ## Technologies
 
 - Python 3
 - Ollama
-- Qwen 2.5 (Local LLM)
 - Pydantic
 - PyPDF
-- Git
+- pytest
 
-## Roadmap
-
-### Near Term
-
-- Improve CV parser accuracy
-- Improve prompt quality
-- Better AI scoring consistency
-- Job description analysis
-
-### Future
-
-- ATS compatibility analysis
-- Web interface
-- PDF report generation
-- Career dashboard
-- Multi-model AI support
+The architecture is provider-agnostic; Ollama is the current provider.
 
 ## Status
 
 Current version: **MVP (CLI)**
 
-The project is under active development.
+Sprint 19 is complete with 303 passing automated tests. Sprint 20 will focus on robust Candidate Profile extraction across diverse CV layouts, document styles, professions, and wording variations.
+
+REST API and frontend delivery layers are not yet implemented.
 
 ## Getting Started
 
@@ -96,7 +64,7 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-Install Ollama and pull the model:
+Install Ollama and pull a compatible local model:
 
 ```bash
 ollama pull qwen2.5:7b

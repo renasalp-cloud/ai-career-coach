@@ -2,9 +2,9 @@
 
 ## Why does this product exist?
 
-AI Career Coach exists to help people understand how well their current CV matches their target software career path.
+AI Career Coach exists to help people understand how well their current CV matches the requirements of a target role.
 
-Many students, graduates, and junior developers do not know whether their CV clearly shows the right skills for the jobs they want. They may have projects, education, or experience, but they often struggle to understand what is strong, what is missing, and what should be improved.
+Candidates do not always know whether their CV clearly demonstrates the requirements of the roles they want. They may have projects, education, certifications, or experience, but often struggle to understand what is strong, what is missing, and what should be improved.
 
 This product aims to make that process easier by using AI to analyze a user's CV and provide clear, practical career feedback.
 
@@ -20,22 +20,21 @@ AI Career Coach helps users answer questions such as:
 
 ## Who will use it?
 
-The first target users are:
+Target users include:
 
-- Computer science students
-- Recent graduates
-- Junior software developers
-- People applying for internships
-- People changing career direction into software or AI-related roles
+- Students and recent graduates
+- Early-career and experienced professionals
+- People applying for internships or jobs
+- People changing career direction
 
 ## First version features
 
 The first version of AI Career Coach will include:
 
 - Uploading or providing a PDF CV
-- Selecting a target career role
+- Supplying a target role and its requirements
 - Extracting text from the CV
-- Analyzing the CV with AI
+- Comparing candidate evidence with supplied requirements
 - Showing strengths and weaknesses
 - Giving practical improvement suggestions
 

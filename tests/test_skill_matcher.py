@@ -1,7 +1,7 @@
 import copy
 import unittest
 
-from app.candidate_profile.models import ExperienceEntry, SkillEntry
+from app.candidate_profile.models import EducationEntry, ExperienceEntry, SkillEntry
 from app.evidence.models import CandidateEvidence, ScoredCandidateEvidence
 from app.evidence.ranker import EvidenceRanker
 from app.evidence.scorer import EvidenceQualityScorer
@@ -54,6 +54,136 @@ class TrackingRanker(EvidenceRanker):
 
 
 class SkillMatcherTest(unittest.TestCase):
+    def test_ignores_generic_capability_modifiers(self) -> None:
+        cases = (
+            ("Python", "Strong Python programming skills"),
+            ("Git and GitHub", "Familiarity with Git and GitHub"),
+        )
+        for candidate_skill, requirement in cases:
+            with self.subTest(requirement=requirement):
+                match = SkillMatcher().match(
+                    CandidateProfile(skills=[SkillEntry(name=candidate_skill)]),
+                    RequirementProfile(
+                        skills=[RequirementSkill(name=requirement, priority="required")]
+                    ),
+                )[0]
+                self.assertEqual(match.candidate_skill, candidate_skill)
+
+    def test_modifier_matching_preserves_meaningful_qualifiers(self) -> None:
+        candidate = CandidateProfile(skills=[SkillEntry(name="Python")])
+        requirements = RequirementProfile(
+            skills=[
+                RequirementSkill(name="Python testing", priority="required"),
+                RequirementSkill(name="Python web development", priority="required"),
+                RequirementSkill(name="Strong Kubernetes skills", priority="required"),
+            ]
+        )
+
+        self.assertTrue(
+            all(
+                match.candidate_skill is None
+                for match in SkillMatcher().match(candidate, requirements)
+            )
+        )
+
+    def test_explicit_cefr_language_evidence_matches_written_and_spoken_requirement(self) -> None:
+        candidate = CandidateProfile(languages=["English B2"])
+        requirement = RequirementProfile(
+            skills=[
+                RequirementSkill(
+                    name="Good written and spoken English",
+                    priority="required",
+                    category="language",
+                )
+            ]
+        )
+
+        match = SkillMatcher().match(candidate, requirement)[0]
+
+        self.assertEqual(match.candidate_skill, "english")
+        self.assertEqual(match.evidence[0].text, "English B2")
+
+    def test_language_matching_is_conservative(self) -> None:
+        requirement = RequirementProfile(
+            skills=[
+                RequirementSkill(
+                    name="Good written and spoken English",
+                    priority="required",
+                    category="language",
+                )
+            ]
+        )
+
+        for candidate in (
+            CandidateProfile(languages=["English"]),
+            CandidateProfile(languages=["German B2"]),
+            CandidateProfile(summary="English national"),
+        ):
+            with self.subTest(candidate=candidate):
+                self.assertIsNone(
+                    SkillMatcher().match(candidate, requirement)[0].candidate_skill
+                )
+
+    def test_completed_related_field_education_matches_compatible_level(self) -> None:
+        candidate = CandidateProfile(
+            education=[
+                EducationEntry(
+                    degree="Bachelor of Computer Systems",
+                    status="completed",
+                )
+            ]
+        )
+        requirement = RequirementProfile(
+            skills=[
+                RequirementSkill(
+                    name="Bachelor's degree in Software Engineering or a related field",
+                    priority="required",
+                    category="education",
+                )
+            ]
+        )
+
+        self.assertEqual(
+            SkillMatcher().match(candidate, requirement)[0].candidate_skill,
+            "Bachelor of Computer Systems",
+        )
+
+    def test_related_field_education_requires_level_field_and_completion(self) -> None:
+        requirement = RequirementProfile(
+            skills=[
+                RequirementSkill(
+                    name="Bachelor's degree in Nursing or a related field",
+                    priority="required",
+                    category="education",
+                )
+            ]
+        )
+        candidates = (
+            CandidateProfile(
+                education=[
+                    EducationEntry(
+                        degree="Bachelor of Computer Systems", status="completed"
+                    )
+                ]
+            ),
+            CandidateProfile(
+                education=[
+                    EducationEntry(degree="Diploma in Nursing", status="completed")
+                ]
+            ),
+            CandidateProfile(
+                education=[
+                    EducationEntry(degree="Master of Nursing", status="current")
+                ]
+            ),
+        )
+
+        for candidate in candidates:
+            with self.subTest(candidate=candidate):
+                self.assertIsNone(
+                    SkillMatcher().match(candidate, requirement)[0].candidate_skill
+                )
+
     def test_problem_solving_matches_requirement_with_generic_skills_suffix(self) -> None:
         candidate = CandidateProfile(skills=[SkillEntry(name="Problem solving")])
         requirements = RequirementProfile(

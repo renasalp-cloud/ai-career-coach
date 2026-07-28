@@ -25,7 +25,11 @@ class RequirementProfileNormalizer:
 
             seen_names.add(comparison_key)
             normalized_skills.append(
-                RequirementSkill(name=name, priority=skill.priority)
+                RequirementSkill(
+                    name=name,
+                    priority=skill.priority,
+                    category=skill.category,
+                )
             )
 
         return profile.model_copy(

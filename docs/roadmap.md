@@ -32,19 +32,19 @@ Build a working command-line application capable of analyzing a CV with a local 
 
 # Milestone 2 — Assessment Engine
 
-Status: In Progress
+Status: Completed
 
 ## Goal
 
 Separate business logic from AI reasoning.
 
-### Planned
+### Completed
 
 - Candidate Profile domain model
-- Role Profile loader
+- Generic Requirement Pipeline
 - Assessment Engine
-- Recommendation Engine
-- Learning Roadmap Generator
+- Deterministic recommendation generation
+- Deterministic learning roadmap generation
 - Better prompt orchestration
 - Consistent scoring
 - Evidence-based reasoning
@@ -53,38 +53,46 @@ Separate business logic from AI reasoning.
 
 # Milestone 3 — Career Intelligence
 
-Status: Planned
+Status: In Progress
 
 ## Goal
 
 Improve analysis quality.
 
-### Planned
+### Completed
 
-- Better CV parsing
-- Multiple CV formats
-- Better role understanding
 - Skill normalization
 - Duplicate skill detection
-- Stronger reasoning quality
+- Requirement category preservation
+- Conservative deterministic matching
 - Hallucination reduction
+
+### Current Focus
+
+- Robust Candidate Profile extraction
+- Diverse CV layouts and document styles
+- Improved semantic evidence
+- Analysis quality improvements
 
 ---
 
 # Milestone 4 — Job Matching
 
-Status: Planned
+Status: In Progress
 
 ## Goal
 
 Compare candidates against real job descriptions.
 
-### Planned
+### Completed
 
-- Job Description parser
+- Job description requirement extraction
 - CV vs Job comparison
 - Match score
 - Missing requirements
+
+### Planned
+
 - ATS compatibility
 - Resume optimization
 

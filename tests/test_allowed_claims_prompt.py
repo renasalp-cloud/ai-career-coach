@@ -174,6 +174,15 @@ class AllowedClaimsPromptTest(unittest.TestCase):
             template,
         )
 
+    def test_template_limits_analysis_to_dynamic_authoritative_input(self) -> None:
+        template = open("app/prompts/cv_analysis.txt", encoding="utf-8").read()
+
+        self.assertIn("Use only the supplied requirement profile.", template)
+        self.assertIn("Do not add requirements based on", template)
+        self.assertIn("treat them as alternatives", template)
+        self.assertIn("do not require the candidate to satisfy every", template)
+        self.assertIn("Use only supplied candidate evidence.", template)
+
 
 if __name__ == "__main__":
     unittest.main()

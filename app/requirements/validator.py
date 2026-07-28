@@ -11,6 +11,17 @@ class RequirementProfileValidator:
     """Validate requirement profiles without repairing or mutating them."""
 
     _VALID_PRIORITIES = {"required", "preferred", "optional"}
+    _VALID_CATEGORIES = {
+        "skill",
+        "experience",
+        "education",
+        "certification",
+        "language",
+        "tool",
+        "domain_knowledge",
+        "soft_skill",
+        "other",
+    }
 
     def validate(self, profile: RequirementProfile) -> RequirementProfile:
         """Return ``profile`` unchanged when it is valid."""
@@ -37,6 +48,11 @@ class RequirementProfileValidator:
             if skill.priority not in self._VALID_PRIORITIES:
                 raise RequirementProfileValidationError(
                     f"Unsupported requirement skill priority: {skill.priority!r}."
+                )
+
+            if skill.category not in self._VALID_CATEGORIES:
+                raise RequirementProfileValidationError(
+                    f"Unsupported requirement skill category: {skill.category!r}."
                 )
 
         return profile
