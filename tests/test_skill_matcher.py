@@ -54,6 +54,71 @@ class TrackingRanker(EvidenceRanker):
 
 
 class SkillMatcherTest(unittest.TestCase):
+    def test_normalizes_abbreviations_in_skills_and_multiple_evidence_sources(self) -> None:
+        cases = (
+            ("MS Office", CandidateProfile(skills=[SkillEntry(name="Microsoft Office")])),
+            ("Generative AI", CandidateProfile(summary="Delivered GenAI solutions")),
+            ("Large Language Model", CandidateProfile(projects=["Created an LLM prototype"])),
+            ("Git", CandidateProfile(certifications=["Git & GitHub certification"])),
+        )
+
+        for requirement_name, candidate in cases:
+            with self.subTest(requirement=requirement_name):
+                match = SkillMatcher().match(
+                    candidate,
+                    RequirementProfile(
+                        skills=[RequirementSkill(name=requirement_name, priority="required")]
+                    ),
+                )[0]
+                self.assertIsNotNone(match.candidate_skill)
+                self.assertTrue(match.evidence)
+
+    def test_alias_matching_is_bidirectional_and_works_in_experience(self) -> None:
+        candidate = CandidateProfile(
+            experience=[
+                ExperienceEntry(highlights=["Experience with machine learning algorithms"])
+            ]
+        )
+        requirements = RequirementProfile(
+            skills=[
+                RequirementSkill(name="Built machine learning models", priority="required")
+            ]
+        )
+
+        match = SkillMatcher().match(candidate, requirements)[0]
+
+        self.assertEqual(match.candidate_skill, "Built machine learning models")
+        self.assertEqual(match.evidence[0].source, "experience")
+
+    def test_punctuation_normalization_matches_problem_solving(self) -> None:
+        candidate = CandidateProfile(summary="Strong analytical and problem-solving skills")
+        requirements = RequirementProfile(
+            skills=[RequirementSkill(name="Problem solving", priority="required")]
+        )
+
+        self.assertIsNotNone(SkillMatcher().match(candidate, requirements)[0].candidate_skill)
+
+    def test_conservative_singular_plural_normalization(self) -> None:
+        candidate = CandidateProfile(projects=["Developed a forecasting model"])
+        requirements = RequirementProfile(
+            skills=[RequirementSkill(name="Forecasting models", priority="required")]
+        )
+
+        self.assertIsNotNone(SkillMatcher().match(candidate, requirements)[0].candidate_skill)
+
+    def test_normalization_does_not_create_related_technology_false_positives(self) -> None:
+        cases = (("PyTorch", "Python"), ("LangChain", "AI"), ("Kubernetes", "Docker"))
+        for requirement_name, candidate_skill in cases:
+            with self.subTest(requirement=requirement_name):
+                match = SkillMatcher().match(
+                    CandidateProfile(skills=[SkillEntry(name=candidate_skill)]),
+                    RequirementProfile(
+                        skills=[RequirementSkill(name=requirement_name, priority="required")]
+                    ),
+                )[0]
+                self.assertIsNone(match.candidate_skill)
+                self.assertEqual(match.evidence, [])
+
     def test_ignores_generic_capability_modifiers(self) -> None:
         cases = (
             ("Python", "Strong Python programming skills"),

@@ -7,9 +7,11 @@ from app.application import (
     RequirementProcessingError,
 )
 from app.bootstrap import create_application_service
+from app.analysis.output_normalizer import normalize_presentation_text
 from app.candidate_profile.models import CandidateProfile
 from app.requirements.source import RequirementSource, RequirementSourceType
 
+EMPTY_DISPLAY = "No information available."
 
 def _read_pasted_requirement_text(input_func=input) -> str:
     """Read job-description lines until a line containing only END."""
@@ -51,20 +53,20 @@ def collect_requirement_source(target_role: str, input_func=input) -> Requiremen
 
 def _format_value(value) -> str:
     if value is None:
-        return "Not provided."
+        return EMPTY_DISPLAY
 
     if isinstance(value, str):
-        text = value.strip()
-        return text if text else "Not provided."
+        text = normalize_presentation_text(value)
+        return text if text else EMPTY_DISPLAY
 
     if isinstance(value, list):
         if not value:
-            return "Not provided."
+            return EMPTY_DISPLAY
         return ", ".join(_format_value(item) for item in value)
 
     if isinstance(value, dict):
         if not value:
-            return "Not provided."
+            return EMPTY_DISPLAY
         return "; ".join(
             f"{str(key).replace('_', ' ').title()}: {_format_value(item)}"
             for key, item in value.items()
@@ -80,7 +82,7 @@ def _print_section(title: str, value) -> None:
 
 def _print_bullets(items, formatter) -> None:
     if not items:
-        print("Not provided.")
+        print(EMPTY_DISPLAY)
         return
 
     for item in items:
@@ -104,8 +106,8 @@ def print_candidate_profile(candidate_profile: CandidateProfile) -> None:
                 f"{_format_value(item.start_date)} - {_format_value(item.end_date)}",
                 _format_value(item.status),
             )
-            if part != "Not provided."
-        ) or "Not provided.",
+            if part != EMPTY_DISPLAY
+        ) or EMPTY_DISPLAY,
     )
 
     print("\nExperience:")
@@ -120,8 +122,8 @@ def print_candidate_profile(candidate_profile: CandidateProfile) -> None:
                 _format_value(item.location),
                 _format_value(item.highlights),
             )
-            if part != "Not provided."
-        ) or "Not provided.",
+            if part != EMPTY_DISPLAY
+        ) or EMPTY_DISPLAY,
     )
 
     _print_section("Projects", candidate_profile.projects)
@@ -136,16 +138,18 @@ def _print_strengths(strengths) -> None:
     print("\nStrengths:")
 
     if not strengths:
-        print("Not provided.")
+        print(EMPTY_DISPLAY)
         return
 
     for item in strengths:
         if isinstance(item, dict):
             title = _format_value(item.get("title"))
             evidence = _format_value(item.get("evidence"))
-            if title == "Not provided." and evidence == "Not provided.":
-                print("- Not provided.")
-            elif evidence == "Not provided.":
+            if title == EMPTY_DISPLAY and evidence == EMPTY_DISPLAY:
+                print(f"- {EMPTY_DISPLAY}")
+            elif title == EMPTY_DISPLAY:
+                print(f"- {evidence}")
+            elif evidence == EMPTY_DISPLAY:
                 print(f"- {title}")
             else:
                 print(f"- {title}: {evidence}")
@@ -157,16 +161,16 @@ def _print_missing_skill_group(label: str, skills) -> None:
     print(f"  {label}:")
 
     if not skills:
-        print("  Not provided.")
+        print(f"  {EMPTY_DISPLAY}")
         return
 
     for item in skills:
         if isinstance(item, dict):
             skill = _format_value(item.get("skill"))
             reason = _format_value(item.get("reason"))
-            if skill == "Not provided." and reason == "Not provided.":
-                print("  - Not provided.")
-            elif reason == "Not provided.":
+            if skill == EMPTY_DISPLAY and reason == EMPTY_DISPLAY:
+                print(f"  - {EMPTY_DISPLAY}")
+            elif reason == EMPTY_DISPLAY:
                 print(f"  - {skill}")
             else:
                 print(f"  - {skill}: {reason}")
@@ -178,7 +182,7 @@ def _print_missing_skills(missing_skills) -> None:
     print("\nMissing Skills:")
 
     if not isinstance(missing_skills, dict) or not missing_skills:
-        print("Not provided.")
+        print(EMPTY_DISPLAY)
         return
 
     for level in ("critical", "important", "optional"):
@@ -189,7 +193,7 @@ def _print_recommendations(recommendations) -> None:
     print("\nRecommendations:")
 
     if not recommendations:
-        print("Not provided.")
+        print(EMPTY_DISPLAY)
         return
 
     for item in recommendations:
@@ -199,17 +203,17 @@ def _print_recommendations(recommendations) -> None:
             reason = _format_value(item.get("reason"))
             action = _format_value(item.get("action"))
 
-            if priority != "Not provided.":
+            if priority != EMPTY_DISPLAY:
                 print(f"- Priority: {priority}")
-            if title != "Not provided.":
+            if title != EMPTY_DISPLAY:
                 print(f"  Title: {title}")
-            if reason != "Not provided.":
+            if reason != EMPTY_DISPLAY:
                 print(f"  Reason: {reason}")
-            if action != "Not provided.":
+            if action != EMPTY_DISPLAY:
                 print(f"  Action: {action}")
 
-            if all(value == "Not provided." for value in (priority, title, reason, action)):
-                print("- Not provided.")
+            if all(value == EMPTY_DISPLAY for value in (priority, title, reason, action)):
+                print(f"- {EMPTY_DISPLAY}")
         else:
             print(f"- {_format_value(item)}")
 
@@ -218,13 +222,13 @@ def _print_learning_roadmap(learning_roadmap) -> None:
     print("\nLearning Roadmap:")
 
     if not learning_roadmap:
-        print("Not provided.")
+        print(EMPTY_DISPLAY)
         return
 
     for index, item in enumerate(learning_roadmap, start=1):
         if isinstance(item, dict):
             week = _format_value(item.get("week"))
-            if week == "Not provided.":
+            if week == EMPTY_DISPLAY:
                 week = str(index)
 
             print(f"- Week {week}")
@@ -239,7 +243,7 @@ def _print_learning_roadmap(learning_roadmap) -> None:
 def print_analysis(analysis: dict) -> None:
     print("=" * 60)
     score = analysis.get("overall_match_score") if isinstance(analysis, dict) else None
-    print(f"Overall Match Score: {_format_value(score)}/100" if score is not None else "Overall Match Score: Not provided.")
+    print(f"Overall Match Score: {_format_value(score)}/100" if score is not None else f"Overall Match Score: {EMPTY_DISPLAY}")
 
     _print_section("Professional Summary", analysis.get("professional_summary") if isinstance(analysis, dict) else None)
     _print_strengths(analysis.get("strengths") if isinstance(analysis, dict) else None)

@@ -30,7 +30,7 @@ class AssessedRequirement(BaseModel):
     name: str
     category: RequirementCategory = "skill"
     priority: Literal["required", "preferred", "optional"] = "required"
-    status: Literal["demonstrated", "missing"]
+    status: Literal["demonstrated", "partial", "missing"]
     evidence_strength: EvidenceStrength
 
 
@@ -60,7 +60,7 @@ class RequirementAssessment(BaseModel):
 class RequirementAssessmentEngine:
     """Build an assessment from profile priorities and validated statuses."""
 
-    _SUPPORTED_STATUSES = {"demonstrated", "missing"}
+    _SUPPORTED_STATUSES = {"demonstrated", "partial", "missing"}
 
     @staticmethod
     def _percentage(demonstrated: int, total: int) -> int:
@@ -143,12 +143,12 @@ class RequirementAssessmentEngine:
             if match.status == "demonstrated":
                 demonstrated[requirement.priority] += 1
                 self._append_unique(demonstrated_skills, requirement.name)
-            else:
+            elif match.status == "missing":
                 self._append_unique(missing[requirement.priority], requirement.name)
 
         total = len(requirement_profile.skills)
         demonstrated_total = sum(demonstrated.values())
-        missing_total = total - demonstrated_total
+        missing_total = sum(len(items) for items in missing.values())
 
         return RequirementAssessment(
             total_requirements=total,

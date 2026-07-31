@@ -9,11 +9,19 @@ class SkillAliasRegistry:
         normalized_requirement = self._normalize(requirement_skill)
 
         for canonical_name, aliases in self.aliases.items():
-            if self._normalize(canonical_name) == normalized_requirement:
-                return aliases
+            equivalent_names = [canonical_name, *aliases]
+            if any(
+                self._normalize(name) == normalized_requirement
+                for name in equivalent_names
+            ):
+                return [
+                    name
+                    for name in equivalent_names
+                    if self._normalize(name) != normalized_requirement
+                ]
 
         return []
 
     @staticmethod
     def _normalize(value: str) -> str:
-        return value.strip().lower()
+        return " ".join(value.strip().lower().replace("-", " ").split())

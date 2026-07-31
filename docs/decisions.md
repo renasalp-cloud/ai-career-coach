@@ -448,6 +448,8 @@ The normalizer repairs structural inconsistencies only.
 
 It must never modify analytical conclusions.
 
+Normalization also centralizes removal of placeholder values and presentation-safe fallbacks. These deterministic repairs are preferred over additional prompt instructions and do not alter requirement assessment authority.
+
 ## Alternatives Considered
 
 - Larger prompts
@@ -486,10 +488,13 @@ Responsibilities include:
 
 - Remove demonstrated skills from missing skills
 - Validate strengths
+- Normalize strengths against deterministic candidate evidence and assessment
 - Group missing skills
 - Align recommendations
 - Align learning roadmap
 - Correct unsupported summaries
+
+Presentation quality may be improved deterministically, but demonstrated and missing classifications must remain unchanged.
 
 The post-processing layer improves consistency without regenerating the analysis.
 
@@ -1027,6 +1032,8 @@ Introduce an Application Layer that exposes a single `ApplicationService` respon
 
 A dedicated composition root (`bootstrap.py`) constructs the dependency graph, while delivery adapters (CLI and future FastAPI) depend only on the application service.
 
+The Application Service returns structured application results. The CLI formats those results for terminal presentation only; future frontend delivery must consume the structured result rather than parse CLI output. Business logic must not be placed in either presentation layer.
+
 ## Consequences
 
 Benefits:
@@ -1141,6 +1148,34 @@ This decision sets the quality priority without choosing implementation details.
 - Candidate extraction quality is addressed before expanding delivery features.
 - Sprint 20 remains profession-agnostic and provider-agnostic.
 - Implementation details require separate review and approval.
+
+Sprint 20 completed this quality priority through generic extraction, parser diagnostics, section-boundary handling, and layout robustness improvements. The resulting pipeline preserves the extractor and normalizer responsibilities established by ADR-006 and ADR-007.
+
+---
+
+# ADR-027 — Backend Feature Freeze Before Frontend Delivery
+
+**Date:** 2026-07-31
+
+**Status:** Accepted
+
+## Context
+
+Frontend implementation requires a stable application contract. Continuing broad backend feature development during frontend integration would make that boundary difficult to validate and increase delivery-layer coupling.
+
+## Decision
+
+Feature-freeze the stabilized backend before frontend implementation. Frontend work must build on structured Application Service results and preserve the deterministic assessment, claim-validation, and normalization behavior already established by the backend.
+
+Presentation concerns may change how results are displayed, but must not move business logic into the CLI or frontend.
+The backend feature freeze applies to business logic. Future backend changes should primarily consist of bug fixes or explicitly approved architectural extensions.
+
+## Consequences
+
+- Frontend integration has a stable, structured backend contract.
+- CLI and frontend remain replaceable presentation layers.
+- Deterministic assessment behavior is preserved while presentation evolves.
+- New backend behavior requires explicit review after the feature freeze.
 
 ---
 

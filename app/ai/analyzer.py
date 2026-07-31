@@ -6,8 +6,11 @@ from pathlib import Path
 from pydantic import ValidationError
 
 from app.analysis.output_normalizer import normalize_career_analysis_output
-from app.assessment.requirement_assessment import RequirementAssessmentEngine
-from app.models import CareerAnalysis, RequirementProfile
+from app.assessment.requirement_assessment import (
+    RequirementAssessment,
+    RequirementAssessmentEngine,
+)
+from app.models import CareerAnalysis, RequirementProfile, SkillMatch
 from app.analysis.consistency_processor import AnalysisConsistencyProcessor
 from app.claims.allowed_claims_builder import AllowedClaimsBuilder
 from app.claims.unsupported_claims_validator import UnsupportedClaimsValidator
@@ -18,6 +21,7 @@ from app.candidate_profile.extractor import extract_candidate_profile
 from app.candidate_profile.normalizer import normalize_candidate_profile
 from app.evidence.ranker import EvidenceRanker
 from app.evidence.scorer import EvidenceQualityScorer
+from app.evidence.models import ScoredCandidateEvidence
 from app.semantic.default_aliases import build_default_skill_alias_registry
 from app.semantic.evidence_collector import CandidateEvidenceCollector
 from app.semantic.matcher import SkillMatcher
@@ -74,6 +78,47 @@ class CareerAnalysisGenerationError(RuntimeError):
 class AnalysisResult:
     candidate_profile: CandidateProfile
     analysis: dict
+
+
+@dataclass(frozen=True)
+class RequirementMatchingResult:
+    """Deterministic output of the public requirement-matching flow."""
+
+    ranked_candidate_evidence: list[ScoredCandidateEvidence]
+    validated_skill_matches: list[SkillMatch]
+    requirement_assessment: RequirementAssessment
+
+
+def assess_candidate_requirements(
+    candidate_profile: CandidateProfile,
+    requirement_profile: RequirementProfile,
+    skill_matcher: SkillMatcher | None = None,
+) -> RequirementMatchingResult:
+    """Collect evidence and produce the authoritative deterministic assessment."""
+    evidence_collector = CandidateEvidenceCollector()
+    evidence_scorer = EvidenceQualityScorer()
+    evidence_ranker = EvidenceRanker()
+    ranked_candidate_evidence = evidence_ranker.rank(
+        evidence_scorer.score_all(evidence_collector.collect(candidate_profile))
+    )
+    matcher = skill_matcher or SkillMatcher(
+        alias_registry=build_default_skill_alias_registry(),
+        evidence_collector=evidence_collector,
+        evidence_scorer=evidence_scorer,
+        evidence_ranker=evidence_ranker,
+    )
+    validated_skill_matches = SkillValidator().validate(
+        matcher.match(candidate_profile, requirement_profile)
+    )
+    requirement_assessment = RequirementAssessmentEngine().assess(
+        requirement_profile,
+        validated_skill_matches,
+    )
+    return RequirementMatchingResult(
+        ranked_candidate_evidence=ranked_candidate_evidence,
+        validated_skill_matches=validated_skill_matches,
+        requirement_assessment=requirement_assessment,
+    )
 
 
 def extract_json(text: str) -> str:
@@ -263,6 +308,7 @@ def analyze_cv(
     cv_text: str,
     requirement_profile: RequirementProfile,
     cv_sections: dict[str, str] | None = None,
+    candidate_profile: CandidateProfile | None = None,
     allowed_claims_builder: AllowedClaimsBuilder | None = None,
     unsupported_claims_validator: UnsupportedClaimsValidator | None = None,
 ) -> AnalysisResult:
@@ -273,27 +319,17 @@ def analyze_cv(
     if cv_sections is None:
         cv_sections = parse_cv(cv_text)
 
-    candidate_profile = extract_candidate_profile(cv_sections)
-    candidate_profile = normalize_candidate_profile(candidate_profile)
+    if candidate_profile is None:
+        candidate_profile = normalize_candidate_profile(
+            extract_candidate_profile(cv_sections)
+        )
 
-    evidence_collector = CandidateEvidenceCollector()
-    evidence_scorer = EvidenceQualityScorer()
-    evidence_ranker = EvidenceRanker()
-    ranked_candidate_evidence = evidence_ranker.rank(
-        evidence_scorer.score_all(evidence_collector.collect(candidate_profile))
+    matching_result = assess_candidate_requirements(
+        candidate_profile, requirement_profile
     )
-    skill_matcher = SkillMatcher(
-        alias_registry=build_default_skill_alias_registry(),
-        evidence_collector=evidence_collector,
-        evidence_scorer=evidence_scorer,
-        evidence_ranker=evidence_ranker,
-    )
-    skill_matches = skill_matcher.match(candidate_profile, requirement_profile)
-    validated_skill_matches = SkillValidator().validate(skill_matches)
-    requirement_assessment = RequirementAssessmentEngine().assess(
-        requirement_profile,
-        validated_skill_matches,
-    )
+    ranked_candidate_evidence = matching_result.ranked_candidate_evidence
+    validated_skill_matches = matching_result.validated_skill_matches
+    requirement_assessment = matching_result.requirement_assessment
     claim_builder = allowed_claims_builder or AllowedClaimsBuilder()
     allowed_claims = claim_builder.build(
         candidate_profile,

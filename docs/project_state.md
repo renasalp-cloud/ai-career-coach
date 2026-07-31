@@ -3,7 +3,7 @@
 > This document is the primary source of truth for the current state of the AI Career Coach project.
 > All development conversations should begin by reviewing this file.
 
-Last Updated: 2026-07-28
+Last Updated: 2026-07-31
 
 ---
 
@@ -13,7 +13,9 @@ Sprint 20 — Robust Candidate Extraction and Analysis Quality
 
 Status:
 
-Not Started
+Completed (Feature Frozen)
+
+The backend is feature frozen and ready for frontend integration.
 
 ---
 
@@ -86,7 +88,7 @@ CareerAnalysis
 ↓
 Application Service
 ↓
-CLI / Future FastAPI
+CLI / FastAPI Delivery Layer
 ```
 
 Composition Root:
@@ -126,6 +128,7 @@ Delivery adapters depend on the Application Service and do not own business orch
 * ✅ Sprint 17 — Unsupported Claims and Analysis Authority
 * ✅ Sprint 18 — Requirement Filtering and Logical Requirement Preservation
 * ✅ Sprint 19 — Requirement Semantics and Deterministic Consistency
+* ✅ Sprint 20 — Robust Candidate Extraction and Analysis Quality
 
 Static role profiles are no longer production analysis authority.
 
@@ -209,7 +212,6 @@ The LLM must not:
 
 # Known Limitations
 
-* Candidate Profile extraction is not yet robust across diverse CV layouts and document styles.
 * Partial requirement satisfaction is not yet supported.
 * Recommendation generation is deterministic but remains template-based.
 * The learning roadmap is deterministic but not yet personalized beyond validated requirement gaps and priority.
@@ -218,27 +220,35 @@ The LLM must not:
 
 ---
 
-# Sprint 20
+# Sprint 20 Summary
 
-## Primary Goal
+Sprint 20 strengthened the existing backend pipeline without changing its profession-agnostic or provider-independent boundaries.
 
-Improve Candidate Profile extraction quality across diverse CV layouts and professions.
+Completed work:
 
-## Focus Areas
+* ✅ More robust candidate extraction across varied layouts
+* ✅ Improved education, experience, and skill-section extraction
+* ✅ Parser diagnostics and section-boundary cleanup
+* ✅ Multi-column PDF text handling
+* ✅ Improved deterministic evidence matching and education assessment
+* ✅ Centralized output normalization and placeholder filtering
+* ✅ Professional-summary fallback and deterministic strengths normalization
+* ✅ Consistent public application flow through the Application Service
+* ✅ Backend stabilization and frontend readiness verification
 
-* Candidate extraction robustness
-* Layout-independent extraction
-* Improved semantic evidence
-* Analysis quality improvements
+Latest confirmed automated test result:
 
-Sprint 20 implementation details have not yet been decided.
+```text
+427 passed
+```
+
+The backend is feature-freeze ready. Frontend delivery can consume structured application results without parsing CLI output or owning business logic.
 
 ---
 
 # Next Sprints
 
 ```text
-Sprint 20 — Robust Candidate Extraction and Analysis Quality
 Sprint 21 — FastAPI Delivery Layer
 Sprint 22 — React Frontend
 ```
@@ -272,6 +282,7 @@ Sprint 22 — React Frontend
 * ADR-024 — Logical Requirement Preservation
 * ADR-025 — Conservative Semantic Matching
 * ADR-026 — Candidate Extraction as the Next Quality Priority
+* ADR-027 — Backend Feature Freeze Before Frontend Delivery
 
 Superseded:
 

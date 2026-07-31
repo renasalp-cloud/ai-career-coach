@@ -4,6 +4,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from app.ai.analyzer import AnalysisResult
+from app.analysis.output_normalizer import normalize_final_career_analysis_output
 from app.application.exceptions import (
     AnalysisExecutionError,
     ApplicationError,
@@ -24,7 +25,7 @@ CVParser = Callable[[str], dict[str, str]]
 CandidateProfileExtractor = Callable[[dict[str, str]], CandidateProfile]
 CandidateProfileNormalizer = Callable[[CandidateProfile], CandidateProfile]
 Analyzer = Callable[
-    [str, RequirementProfile, dict[str, str] | None],
+    [str, RequirementProfile, dict[str, str] | None, CandidateProfile],
     AnalysisResult,
 ]
 
@@ -60,7 +61,7 @@ class CareerAnalysisApplicationService(ApplicationService):
             cleaned_cv_text = self._text_cleaner(cv_text)
             cv_sections = self._cv_parser(cleaned_cv_text)
             candidate_profile = self._candidate_profile_extractor(cv_sections)
-            self._candidate_profile_normalizer(candidate_profile)
+            candidate_profile = self._candidate_profile_normalizer(candidate_profile)
         except ApplicationError:
             raise
         except Exception as exc:
@@ -84,8 +85,13 @@ class CareerAnalysisApplicationService(ApplicationService):
                 cleaned_cv_text,
                 requirement_profile,
                 cv_sections,
+                candidate_profile,
             )
-            analysis = CareerAnalysis.model_validate(result.analysis)
+            final_analysis = normalize_final_career_analysis_output(
+                result.analysis,
+                result.candidate_profile.summary,
+            )
+            analysis = CareerAnalysis.model_validate(final_analysis)
         except ApplicationError:
             raise
         except Exception as exc:

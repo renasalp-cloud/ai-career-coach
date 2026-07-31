@@ -2,6 +2,7 @@
 
 import re
 
+from app.analysis.output_normalizer import normalize_presentation_text
 from app.candidate_profile.models import CandidateProfile
 from app.models import (
     CareerAnalysis,
@@ -86,7 +87,10 @@ class AnalysisConsistencyProcessor:
         self._align_roadmap(analysis, missing_groups, demonstrated)
         analysis.career_gap_analysis = self._build_gap_summary(missing_groups)
 
-        if self._introduces_unsupported_title(
+        candidate_summary = normalize_presentation_text(candidate_profile.summary)
+        if candidate_summary:
+            analysis.professional_summary = candidate_summary
+        elif self._introduces_unsupported_title(
             analysis.professional_summary, candidate_profile
         ) or self._gap_contradicts_demonstrated_skill(
             analysis.professional_summary, demonstrated
@@ -97,7 +101,28 @@ class AnalysisConsistencyProcessor:
                 candidate_profile, validated_skill_matches
             )
 
+        self._normalize_presentation(analysis)
+
         return analysis
+
+    @staticmethod
+    def _normalize_presentation(analysis: CareerAnalysis) -> None:
+        analysis.professional_summary = normalize_presentation_text(
+            analysis.professional_summary
+        )
+        analysis.career_gap_analysis = normalize_presentation_text(
+            analysis.career_gap_analysis
+        )
+        for strength in analysis.strengths:
+            strength.title = normalize_presentation_text(strength.title)
+            strength.evidence = normalize_presentation_text(strength.evidence)
+        analysis.strengths = [
+            item for item in analysis.strengths if item.title or item.evidence
+        ]
+        for recommendation in analysis.recommendations:
+            recommendation.title = normalize_presentation_text(recommendation.title)
+            recommendation.reason = normalize_presentation_text(recommendation.reason)
+            recommendation.action = normalize_presentation_text(recommendation.action)
 
     @classmethod
     def _validate_strengths(

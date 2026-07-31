@@ -153,7 +153,21 @@ class RequirementAssessmentEngineTest(unittest.TestCase):
 
     def test_unsupported_match_status_is_rejected(self) -> None:
         with self.assertRaisesRegex(RequirementAssessmentError, "Unsupported.*status"):
-            self.engine.assess(_profile(("A", "required")), [_match("A", "partial")])
+            self.engine.assess(
+                _profile(("A", "required")),
+                [_match("A", "unsupported")],
+            )
+
+    def test_partial_match_is_preserved_without_becoming_missing(self) -> None:
+        assessment = self.engine.assess(
+            _profile(("A", "required")),
+            [_match("A", "partial", 30)],
+        )
+
+        self.assertEqual(assessment.assessed_requirements[0].status, "partial")
+        self.assertEqual(assessment.demonstrated_requirements, 0)
+        self.assertEqual(assessment.missing_requirements, 0)
+        self.assertEqual(assessment.critical_missing_skills, [])
 
     def test_maps_selected_evidence_scores_to_strength_categories(self) -> None:
         profile = _profile(

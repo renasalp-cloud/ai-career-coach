@@ -237,6 +237,39 @@ class AnalysisConsistencyProcessorTest(unittest.TestCase):
         for excluded in ("Real University", "Other University", "Real Employer", "2024", "Secret project", "senior engineer", "ten years", "Invented Corp"):
             self.assertNotIn(excluded, summary)
 
+    def test_professional_summary_prefers_cleaned_candidate_summary(self) -> None:
+        result = self.processor.process(
+            _analysis(summary="They are proficient in English (C1)."),
+            CandidateProfile(
+                summary="Good communication and organizational skil ls.\nWorks calmly under pressure..",
+                languages=["English (C1)"],
+            ),
+            _requirements(),
+            [],
+        )
+
+        self.assertEqual(
+            result.professional_summary,
+            "Good communication and organizational skills. Works calmly under pressure.",
+        )
+
+    def test_strength_and_recommendation_placeholders_are_removed(self) -> None:
+        analysis = _analysis()
+        analysis.strengths = [Strength(title="Not provided.:", evidence="None")]
+        analysis.recommendations = [Recommendation(
+            priority="high", title="N/A", reason="Unknown", action="Not provided."
+        )]
+
+        result = self.processor.process(
+            analysis,
+            CandidateProfile(),
+            RequirementProfile(),
+            [],
+        )
+
+        self.assertEqual(result.strengths, [])
+        self.assertEqual(result.recommendations, [])
+
     def test_unsupported_open_source_strength_is_removed(self) -> None:
         analysis = _analysis()
         analysis.strengths = [

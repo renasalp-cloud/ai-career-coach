@@ -1,4 +1,5 @@
 import re
+from datetime import date
 
 from app.evidence.models import EvidenceSourceType, ScoredCandidateEvidence
 from app.evidence.ranker import EvidenceRanker
@@ -12,7 +13,25 @@ from app.semantic.evidence_collector import CandidateEvidenceCollector
 # TODO: Move exact skill normalization to a shared semantic utility when more
 # semantic components need the same trim/case-insensitive comparison.
 def _normalize(value: str) -> str:
-    return re.sub(r"[^a-z0-9]+", " ", value.lower()).strip()
+    normalized = re.sub(r"[^a-z0-9]+", " ", value.lower()).strip()
+    abbreviation_phrases = (
+        (r"\bms office\b", "microsoft office"),
+        (r"\bgen ai\b|\bgenai\b", "generative ai"),
+        (r"\bllms\b|\bllm\b", "large language model"),
+        (r"\bgit and github\b", "git"),
+    )
+    for pattern, replacement in abbreviation_phrases:
+        normalized = re.sub(pattern, replacement, normalized)
+    singular_forms = {
+        "algorithms": "algorithm",
+        "applications": "application",
+        "models": "model",
+        "skills": "skill",
+    }
+    normalized = " ".join(
+        singular_forms.get(token, token) for token in normalized.split()
+    )
+    return re.sub(r"\s+", " ", normalized).strip()
 
 
 LOW_LEVEL_QUALIFIERS = (
@@ -23,6 +42,9 @@ LOW_LEVEL_QUALIFIERS = (
     "basics",
 )
 GENERIC_SKILL_PREFIXES = (
+    "built",
+    "experience working with",
+    "experience",
     "proficiency in",
     "knowledge of",
     "understanding of",
@@ -34,7 +56,7 @@ GENERIC_SKILL_PREFIXES = (
     "solid",
     "proficient",
 )
-GENERIC_CAPABILITY_SUFFIXES = ("programming skills", "skill", "skills")
+GENERIC_CAPABILITY_SUFFIXES = ("programming skill", "skill")
 LANGUAGE_LEVEL = re.compile(r"\b(?:a1|a2|b1|b2|c1|c2)\b")
 LANGUAGE_MODE = re.compile(
     r"\b(?:listening|writing|written|speaking|spoken|spoken production|"
@@ -45,9 +67,16 @@ EDUCATION_LEVELS = {
     "master": re.compile(r"\b(?:master(?:'s)?|msc|ma)\b"),
     "doctorate": re.compile(r"\b(?:doctorate|doctoral|phd)\b"),
 }
+DEGREE_REQUIREMENT = re.compile(r"\bdegree\b")
+ACTIVE_EDUCATION = re.compile(
+    r"\b(?:present|current|ongoing|in[\s_-]+progress|"
+    r"expected(?:\s+(?:graduation\s+)?)?\d{4})\b"
+)
+INCOMPLETE_EDUCATION = re.compile(r"\b(?:incomplete|abandoned|withdrawn|discontinued)\b")
+HISTORICAL_END_YEAR = re.compile(r"\b(?:19|20)\d{2}\b")
 EDUCATION_FIELD_STOPWORDS = {
     "a", "an", "and", "another", "bachelor", "bachelors", "degree", "field",
-    "in", "of", "or", "related", "the",
+    "in", "of", "or", "related", "s", "the",
 }
 RELATED_FIELD_FAMILIES = (
     frozenset({"computer", "computing", "software", "informatics"}),
@@ -70,6 +99,12 @@ PRACTICAL_REQUIREMENT_PATTERNS = (
 APPLICATION_DEVELOPMENT_REQUIREMENT = re.compile(
     r"\bapplications?\s+development$"
 )
+SOFT_SKILL_CONCEPTS = {
+    "communication": re.compile(r"\b(?:communicat\w*|interpersonal)\b"),
+    "organization": re.compile(r"\b(?:organi[sz]\w*|planning|plan|plans|planned)\b"),
+    "prioritization": re.compile(r"\bpriorit\w*\b"),
+    "time_management": re.compile(r"\btime management\b"),
+}
 
 LEGACY_EVIDENCE_SOURCES = {
     EvidenceSourceType.WORK_EXPERIENCE: "experience",
@@ -156,29 +191,48 @@ def _education_level(value: str) -> str | None:
     )
 
 
-def _education_match(requirement: str, candidate: CandidateProfile) -> str | None:
+def _education_status(status: str, end_date: str) -> str:
+    combined = f"{status} {end_date}".casefold()
+    if INCOMPLETE_EDUCATION.search(combined):
+        return "incomplete"
+    if ACTIVE_EDUCATION.search(combined):
+        return "current"
+    if status.casefold().strip() == "completed":
+        return "completed"
+
+    end_years = HISTORICAL_END_YEAR.findall(end_date)
+    if end_years and int(end_years[-1]) <= date.today().year:
+        return "completed"
+    return "unknown"
+
+
+def _education_match(
+    requirement: str, candidate: CandidateProfile
+) -> tuple[str, str] | None:
     normalized_requirement = _normalize(requirement)
     required_level = _education_level(requirement)
-    if not required_level:
+    if not required_level and not DEGREE_REQUIREMENT.search(normalized_requirement):
         return None
 
     requirement_terms = set(normalized_requirement.split()) - EDUCATION_FIELD_STOPWORDS
     has_related_field = bool(re.search(r"\brelated field\b", normalized_requirement))
 
     for education in candidate.education:
-        if education.status.casefold() != "completed":
+        education_status = _education_status(education.status, education.end_date)
+        if education_status not in {"completed", "current"}:
             continue
         education_text = education.degree
-        if _education_level(education_text) != required_level:
+        education_level = _education_level(education_text)
+        if not education_level or (required_level and education_level != required_level):
             continue
         education_terms = set(_normalize(education_text).split()) - EDUCATION_FIELD_STOPWORDS
         if requirement_terms & education_terms:
-            return education.degree
+            return education.degree, education_status
         if has_related_field and any(
             requirement_terms & family and education_terms & family
             for family in RELATED_FIELD_FAMILIES
         ):
-            return education.degree
+            return education.degree, education_status
     return None
 
 
@@ -193,6 +247,15 @@ def _practical_subject(value: str) -> str | None:
         if match:
             return match.group(1).strip()
     return None
+
+
+def _soft_skill_concepts(value: str) -> set[str]:
+    normalized = _normalize(value)
+    return {
+        concept
+        for concept, pattern in SOFT_SKILL_CONCEPTS.items()
+        if pattern.search(normalized)
+    }
 
 
 class SkillMatcher:
@@ -271,22 +334,34 @@ class SkillMatcher:
                     )
                 )
                 continue
-            if requirement_skill.category == "education" and (
-                education_match := _education_match(role_skill, candidate)
-            ):
-                relevant_evidence = [
-                    item
-                    for item in evidence
-                    if item.evidence.source_type == EvidenceSourceType.EDUCATION
-                    and _contains(item.evidence.source_text, education_match)
-                ]
-                matches.append(
-                    SkillMatch(
-                        role_skill=role_skill,
-                        candidate_skill=education_match,
-                        evidence=self._select_evidence(relevant_evidence),
+            if requirement_skill.category == "education":
+                education_match = _education_match(role_skill, candidate)
+                if education_match:
+                    education_degree, education_status = education_match
+                    relevant_evidence = [
+                        item
+                        for item in evidence
+                        if item.evidence.source_type == EvidenceSourceType.EDUCATION
+                        and _contains(item.evidence.source_text, education_degree)
+                    ]
+                    matches.append(
+                        SkillMatch(
+                            role_skill=role_skill,
+                            candidate_skill=education_degree,
+                            evidence=self._select_evidence(relevant_evidence),
+                            status=(
+                                "partial" if education_status == "current" else None
+                            ),
+                        )
                     )
-                )
+                else:
+                    matches.append(
+                        SkillMatch(
+                            role_skill=role_skill,
+                            candidate_skill=None,
+                            evidence=[],
+                        )
+                    )
                 continue
             practical_subject = _practical_subject(role_skill)
             requires_action_evidence = bool(
@@ -300,6 +375,35 @@ class SkillMatcher:
             )
 
             if candidate_skill is None:
+                required_concepts = _soft_skill_concepts(role_skill)
+                if required_concepts:
+                    concept_evidence = [
+                        item
+                        for item in evidence
+                        if required_concepts & _soft_skill_concepts(
+                            item.evidence.source_text
+                        )
+                    ]
+                    supported_concepts = {
+                        concept
+                        for item in concept_evidence
+                        for concept in _soft_skill_concepts(item.evidence.source_text)
+                    } & required_concepts
+                    if supported_concepts:
+                        matches.append(
+                            SkillMatch(
+                                role_skill=role_skill,
+                                candidate_skill=role_skill,
+                                evidence=self._select_evidence(concept_evidence),
+                                status=(
+                                    None
+                                    if supported_concepts == required_concepts
+                                    else "partial"
+                                ),
+                            )
+                        )
+                        continue
+
                 if practical_subject:
                     relevant_evidence = [
                         item
@@ -349,7 +453,10 @@ class SkillMatcher:
                     for item in evidence
                     if any(
                         _contains(item.evidence.source_text, alias)
-                        for alias in self.alias_registry.aliases_for(role_skill)
+                        for alias in {
+                            *self.alias_registry.aliases_for(role_skill),
+                            *self.alias_registry.aliases_for(normalized_role_skill),
+                        }
                     )
                     and (
                         not requires_action_evidence

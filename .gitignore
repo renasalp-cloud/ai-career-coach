@@ -27,3 +27,5 @@ diff.txt
 
 # Debug
 debug/
+
+.pytest_tmp/

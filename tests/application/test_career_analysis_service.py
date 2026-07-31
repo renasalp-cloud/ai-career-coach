@@ -17,7 +17,7 @@ from app.application import (
     RequirementProcessingError,
 )
 from app.candidate_profile.models import CandidateProfile
-from app.models import CareerAnalysis, RequirementProfile
+from app.models import CareerAnalysis, RequirementProfile, Strength
 from app.requirements.source import RequirementSource, RequirementSourceType
 
 
@@ -139,8 +139,9 @@ class CareerAnalysisApplicationServiceTest(unittest.TestCase):
             text: str,
             profile: RequirementProfile,
             parsed_sections: dict[str, str] | None,
+            candidate_profile: CandidateProfile,
         ) -> AnalysisResult:
-            calls.append(("analyze", text, profile, parsed_sections))
+            calls.append(("analyze", text, profile, parsed_sections, candidate_profile))
             return AnalysisResult(
                 candidate_profile=self.candidate_profile,
                 analysis=self.analysis.model_dump(),
@@ -173,6 +174,7 @@ class CareerAnalysisApplicationServiceTest(unittest.TestCase):
                     "clean cv",
                     self.requirement_profile,
                     sections,
+                    self.candidate_profile,
                 ),
             ],
         )
@@ -259,6 +261,44 @@ class CareerAnalysisApplicationServiceTest(unittest.TestCase):
         self._service(analyzer=analyzer).analyze(self.request)
 
         analyzer.assert_called_once()
+
+    def test_final_normalization_uses_candidate_summary_after_analyzer(self) -> None:
+        candidate = CandidateProfile(summary="Experienced generic coordinator.")
+        analysis = _career_analysis().model_copy(
+            update={
+                "overall_match_score": 82,
+                "professional_summary": "No information available.",
+                "strengths": [
+                    Strength(**{
+                        "title": "No information available.",
+                        "evidence": "Resolved conflicts and communicated with stakeholders.",
+                    })
+                ],
+            }
+        )
+        analyzer = Mock(
+            return_value=AnalysisResult(
+                candidate_profile=candidate,
+                analysis=analysis.model_dump(),
+            )
+        )
+
+        response = self._service(
+            candidate_profile_extractor=Mock(return_value=candidate),
+            candidate_profile_normalizer=Mock(return_value=candidate),
+            analyzer=analyzer,
+        ).analyze(self.request)
+
+        self.assertEqual(
+            response.analysis.professional_summary,
+            "Experienced generic coordinator.",
+        )
+        self.assertEqual(response.analysis.strengths[0].title, "")
+        self.assertEqual(
+            response.analysis.strengths[0].evidence,
+            "Resolved conflicts and communicated with stakeholders.",
+        )
+        self.assertEqual(response.analysis.overall_match_score, 82)
 
 
 if __name__ == "__main__":
