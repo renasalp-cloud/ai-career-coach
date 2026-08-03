@@ -3,17 +3,17 @@
 > This document is the primary source of truth for the current state of the AI Career Coach project.
 > All development conversations should begin by reviewing this file.
 
-Last Updated: 2026-07-31
+Last Updated: 2026-08-03
 
 ---
 
 # Current Sprint
 
-Sprint 20 — Robust Candidate Extraction and Analysis Quality
+Sprint 21 — FastAPI Delivery Layer
 
 Status:
 
-Completed (Feature Frozen)
+Completed
 
 The backend is feature frozen and ready for frontend integration.
 
@@ -129,6 +129,7 @@ Delivery adapters depend on the Application Service and do not own business orch
 * ✅ Sprint 18 — Requirement Filtering and Logical Requirement Preservation
 * ✅ Sprint 19 — Requirement Semantics and Deterministic Consistency
 * ✅ Sprint 20 — Robust Candidate Extraction and Analysis Quality
+* ✅ Sprint 21 — FastAPI Delivery Layer
 
 Static role profiles are no longer production analysis authority.
 
@@ -216,7 +217,7 @@ The LLM must not:
 * Recommendation generation is deterministic but remains template-based.
 * The learning roadmap is deterministic but not yet personalized beyond validated requirement gaps and priority.
 * Semantic alias coverage remains limited.
-* REST API and frontend delivery layers are not implemented.
+* The FastAPI delivery layer currently exposes health and structured analysis endpoints; the frontend delivery layer is not implemented.
 
 ---
 
@@ -246,10 +247,67 @@ The backend is feature-freeze ready. Frontend delivery can consume structured ap
 
 ---
 
-# Next Sprints
+# Sprint 21 Summary
+
+Completed work:
+
+Completed work:
+
+* FastAPI application factory
+* Import-safe application construction
+* Dependency Injection preserved
+* Composition Root preserved
+* `GET /health`
+* Structured `POST /analyses`
+* Multipart PDF upload
+* Request-scoped temporary-file lifecycle management
+* Application Service delegation
+* Structured `AnalysisResponse`
+* Thread-pool execution for synchronous analysis
+* OpenAPI documentation (`/docs` and `/openapi.json`)
+* Environment-driven API configuration
+* Explicit CORS configuration
+* Frontend-ready structured API contract
+
+Task 3 progress:
+
+* OpenAPI application metadata and endpoint tags
+* Documented health and multipart analysis contracts
+* Documented structured success and safe error responses
+* Interactive API documentation and local server instructions
+
+
+Task 4 progress:
+
+* Environment-driven API metadata and CORS origin configuration
+* Explicit local React development origin default
+* Controlled CORS methods, headers, and credential policy
+* Isolated application-factory settings injection
+* Configuration parsing and CORS behavior verification
+
+Task 5 progress:
+
+* Browser-style multipart `FormData` contract verification
+* Actual success-response CORS verification for allowed and disallowed origins
+* Representative nested `AnalysisResponse` JSON serialization verification
+* Predictable `400`, `422`, and `500` frontend error contract verification
+* React API base URL and multipart request guidance
+* No production contract defect found; production code remains unchanged
+
+
+Final verified automated test result:
 
 ```text
-Sprint 21 — FastAPI Delivery Layer
+447 passed
+```
+
+Sprint 21 is complete. The FastAPI adapter is frontend-ready, the backend business logic remains feature frozen, and Sprint 22 can consume the structured application response without reconstructing business decisions.
+
+---
+
+# Next Sprint
+
+```text
 Sprint 22 — React Frontend
 ```
 

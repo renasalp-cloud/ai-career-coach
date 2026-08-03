@@ -1030,9 +1030,11 @@ The CLI directly orchestrated the complete CV analysis pipeline, making it diffi
 
 Introduce an Application Layer that exposes a single `ApplicationService` responsible for orchestrating the existing deterministic analysis pipeline.
 
-A dedicated composition root (`bootstrap.py`) constructs the dependency graph, while delivery adapters (CLI and future FastAPI) depend only on the application service.
+A dedicated composition root (`bootstrap.py`) constructs the dependency graph, while delivery adapters (CLI and FastAPI) depend only on the application service.
 
 The Application Service returns structured application results. The CLI formats those results for terminal presentation only; future frontend delivery must consume the structured result rather than parse CLI output. Business logic must not be placed in either presentation layer.
+
+The FastAPI delivery adapter exposes `POST /analyses` as multipart form data. It adapts the uploaded PDF through a request-scoped temporary file, supplies pasted job-description text through the existing requirement-source abstraction, delegates to the Application Service, and returns its structured result. Delivery-owned temporary files are removed after both successful and failed requests.
 
 ## Consequences
 
@@ -1041,7 +1043,7 @@ Benefits:
 - Delivery adapters are independent of business orchestration.
 - The analysis pipeline remains deterministic.
 - Provider-specific wiring is isolated in the composition root.
-- Future delivery adapters (FastAPI, desktop UI, batch processing) can reuse the same application service.
+- Delivery adapters such as FastAPI, a desktop UI, or batch processing can reuse the same application service.
 
 Trade-offs:
 
@@ -1183,7 +1185,6 @@ The backend feature freeze applies to business logic. Future backend changes sho
 
 Future architectural decisions may include:
 
-* REST API
 * Frontend Architecture
 * Multi-LLM Support
 * Retrieval-Augmented Generation (RAG)

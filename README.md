@@ -16,7 +16,7 @@ Current capabilities include:
 - Deterministic requirement assessment and narrative consistency
 - Allowed-claims and unsupported-claims validation
 - Structured JSON normalization and Pydantic validation
-- Application Service orchestration and CLI delivery
+- Application Service orchestration with CLI and FastAPI delivery
 
 ## Current Architecture
 
@@ -44,11 +44,11 @@ The architecture is provider-agnostic; Ollama is the current provider.
 
 ## Status
 
-Current version: **MVP (CLI)**
+Current version: **Backend MVP (CLI and FastAPI)**
 
-Sprint 19 is complete with 303 passing automated tests. Sprint 20 will focus on robust Candidate Profile extraction across diverse CV layouts, document styles, professions, and wording variations.
+Sprint 20 is complete, and the backend business logic is feature frozen. Sprint 21, the FastAPI delivery layer, is complete. The latest verified automated test result is **447 passed**. Sprint 22, the React frontend, is next.
 
-REST API and frontend delivery layers are not yet implemented.
+The REST API exposes `GET /health` and `POST /analyses`. The analysis route accepts multipart fields `cv_file` (PDF), `target_role`, and `job_description`, delegates to the Application Service, and returns a structured response. The React frontend is not implemented yet.
 
 ## Getting Started
 
@@ -75,3 +75,51 @@ Run the application:
 ```bash
 python -m app.main
 ```
+
+## API Documentation
+
+Run the local development server:
+
+```powershell
+python -m uvicorn app.api.app:app --reload
+```
+
+Interactive API documentation: http://localhost:8000/docs
+
+OpenAPI schema: http://localhost:8000/openapi.json
+
+### Local API configuration
+
+The API reads the following optional environment variables:
+
+- `API_TITLE` (default: `AI Career Coach API`)
+- `API_VERSION` (default: `0.1.0`)
+- `API_DESCRIPTION` (default: the documented career-analysis description)
+- `API_CORS_ORIGINS` (default: `http://localhost:5173`)
+
+`API_CORS_ORIGINS` is a comma-separated list of explicit browser origins. Whitespace,
+empty entries, and duplicates are removed. For example:
+
+```powershell
+$env:API_CORS_ORIGINS="http://localhost:5173,http://127.0.0.1:5173"
+python -m uvicorn app.api.app:app --reload
+```
+
+Only configured origins are allowed. The default supports local React development;
+production deployments must set their actual frontend origin. Wildcard origins are
+not enabled, credentials are disabled, and CORS permits only `GET`, `POST`, and
+preflight `OPTIONS` requests.
+
+### React integration preview
+
+The future React application should configure its API base URL independently:
+
+```text
+VITE_API_BASE_URL=http://localhost:8000
+```
+
+Submit `POST /analyses` as `multipart/form-data` with `cv_file`, `target_role`, and
+`job_description`. Use browser `FormData` and do not set the `Content-Type` header
+manually; the browser must generate the multipart boundary. The successful response
+is structured `AnalysisResponse` JSON and does not require CLI parsing or knowledge
+of the configured LLM provider.

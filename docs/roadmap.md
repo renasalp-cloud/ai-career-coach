@@ -4,6 +4,16 @@ This roadmap describes the long-term evolution of AI Career Coach.
 
 ---
 
+# Current Delivery Status
+
+Sprint 21 — FastAPI Delivery Layer: Completed
+
+Next sprint: Sprint 22 — React Frontend
+
+The backend business behavior is feature frozen. The React frontend will consume the structured `GET /health` and multipart `POST /analyses` API contract.
+
+---
+
 # Milestone 1 — MVP CLI 
 
 Status: Completed
@@ -53,7 +63,7 @@ Separate business logic from AI reasoning.
 
 # Milestone 3 — Career Intelligence
 
-Status: In Progress
+Status: Completed
 
 ## Goal
 
@@ -67,7 +77,7 @@ Improve analysis quality.
 - Conservative deterministic matching
 - Hallucination reduction
 
-### Current Focus
+### Completed
 
 - Robust Candidate Profile extraction
 - Diverse CV layouts and document styles
@@ -150,7 +160,7 @@ Transform AI Career Coach into a complete career platform.
 - Career Progress Tracking
 - Learning Dashboard
 - Multiple AI providers
-- API
+- Additional API integrations
 - Mobile support
 
 ---

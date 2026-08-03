@@ -80,10 +80,22 @@ CandidateProfile                       Category Classifier
                 Unsupported Claims Validator
                                 ↓
                          CareerAnalysis
-                                ↓
-                      Application Service
-                                ↓
-                      CLI / Future API
+```
+
+Delivery flow:
+
+```text
+Planned React Frontend
+        ↓ HTTP
+FastAPI Delivery Adapter
+        ↓
+Application Service
+        ↓
+Existing deterministic pipeline
+
+CLI Delivery Adapter
+        ↓
+Application Service
 ```
 
 ---
@@ -198,7 +210,7 @@ The consistency processor aligns the score and narrative sections with determini
 
 The Application Service owns application orchestration. Dependency construction is centralized in `app/bootstrap.py`.
 
-The CLI and future delivery adapters depend on the Application Service rather than owning business orchestration.
+The CLI and FastAPI delivery adapters depend on the Application Service rather than owning business orchestration. FastAPI owns only HTTP validation, multipart upload adaptation, temporary-file lifecycle, error mapping, OpenAPI, and CORS.
 
 ---
 
@@ -245,13 +257,14 @@ Implemented:
 - Structured output normalization, validation, repair, and consistency processing
 - Application Service and composition root
 - CLI interface
-- 303 automated tests
+- FastAPI delivery adapter with health and structured analysis endpoints
+- 447 automated tests
 
 ---
 
 # Current Limitation
 
-Candidate Profile extraction is the next quality bottleneck and is not yet robust across diverse CV layouts and document styles.
+The React frontend is not yet implemented. The backend business behavior is feature frozen and exposes a stable structured API for Sprint 22.
 
 ---
 
